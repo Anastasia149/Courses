@@ -12,11 +12,13 @@
         <form asp-action="Register" method="post">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
             <div class="mb-3">
                 <label asp-for="Name" class="form-label"></label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
+
             <div class="mb-3">
                 <label asp-for="Email" class="form-label"></label>
                 <input asp-for="Email" class="form-control" />
@@ -27,15 +29,35 @@
                 <input asp-for="Password" class="form-control" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
+
             <div class="mb-3">
                 <label asp-for="ConfirmPassword" class="form-label"></label>
                 <input asp-for="ConfirmPassword" class="form-control" />
                 <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
             </div>
+
+            <!-- Выбор роли (Student / Teacher) -->
+            <div class="mb-3">
+                <label asp-for="Role" class="form-label">User Role</label>
+                <select asp-for="Role" class="form-control" id="roleSelect">
+                    <option value="Student">Student</option>
+                    <option value="Teacher">Teacher</option>
+                </select>
+                <span asp-validation-for="Role" class="text-danger"></span>
+            </div>
+
+            <!-- Поле "Teacher Code" (по умолчанию скрыто) -->
+            <div class="mb-3" id="teacherCodeField" style="display: none;">
+                <label asp-for="TeacherCode" class="form-label">Teacher Code</label>
+                <input asp-for="TeacherCode" class="form-control" />
+                <span asp-validation-for="TeacherCode" class="text-danger"></span>
+            </div>
+
             <input type="submit" value="Register" class="btn btn-success w-100 p-2" />
             <p class="text-center mt-2">
                 Already have an account? <a asp-controller="Account" asp-action="Login" class="text-decoration-none">Login</a>
             </p>
+
             <div class="text-center">
                 <a asp-controller="Home" asp-action="Index" class="text-decoration-none mt-3">Back</a>
             </div>
@@ -45,6 +67,27 @@
 
 @section Scripts {
     @{
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var roleSelect = document.getElementById("roleSelect");
+                var teacherCodeField = document.getElementById("teacherCodeField");
+
+                // Функция для обновления видимости поля TeacherCode
+                function toggleTeacherCodeField() {
+                    if (roleSelect.value === "Teacher") {
+                        teacherCodeField.style.display = "block"; // Показываем поле
+                    } else {
+                        teacherCodeField.style.display = "none"; // Скрываем поле
+                    }
+                }
+
+                // Инициализация видимости при загрузке страницы
+                toggleTeacherCodeField();
+
+                // Обработчик изменения выбора роли
+                roleSelect.addEventListener("change", toggleTeacherCodeField);
+            });
+        </script>
         await Html.RenderPartialAsync("_ValidationScriptsPartial.cshtml");
     }
 }

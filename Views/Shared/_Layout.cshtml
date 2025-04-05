@@ -23,16 +23,16 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-                        @if (User.IsInRole("Admin"))
+                        @if (User.IsInRole("Teacher"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Home" asp-action="Admin">Admin</a>
+                                <a class="nav-link" asp-controller="Home" asp-action="Teacher">Teacher</a>
                             </li>
                         }
-                        @if (User.IsInRole("User"))
+                        @if (User.IsInRole("Student"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Home" asp-action="User">User</a>
+                                <a class="nav-link" asp-controller="Home" asp-action="Student">Student</a>
                             </li>
                         }
                         <partial name="_LoginPartial"/>

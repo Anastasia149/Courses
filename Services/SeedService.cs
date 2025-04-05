@@ -22,41 +22,12 @@ namespace Courses.Services
 
                 // Add roles
                 logger.LogInformation("Seeding roles.");
-                await AddRoleAsync(roleManager, "Admin");
-                await AddRoleAsync(roleManager, "User");
-
-                // Add admin user
-                logger.LogInformation("Seeding admin user.");
-                var adminEmail = "adminn@codehub.com";
-                if (await userManager.FindByEmailAsync(adminEmail) == null)
-                {
-                    var adminUser = new User
-                    {
-                        FullName = "Code Hub",
-                        UserName = adminEmail,
-                        NormalizedUserName = adminEmail.ToUpper(),
-                        Email = adminEmail,
-                        NormalizedEmail = adminEmail.ToUpper(),
-                        EmailConfirmed = true,
-                        SecurityStamp = Guid.NewGuid().ToString()
-                    };
-
-                    var result = await userManager.CreateAsync(adminUser, "Admin@123");
-                    if (result.Succeeded)
-                    {
-                        logger.LogInformation("Assigning Admin role to the admin user.");
-                        await userManager.AddToRoleAsync(adminUser, "Admin");
-                    }
-                    else
-                    {
-                        logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-                    }
-                }
+                await AddRoleAsync(roleManager, "Student");
+                await AddRoleAsync(roleManager, "Teacher");
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "An error occurred while seeding the database.");
-
             }
 
         }

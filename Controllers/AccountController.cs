@@ -60,6 +60,14 @@ namespace Courses.Controllers
                 return View(model);
             }
 
+            // Проверяем код, если выбрана роль "Teacher"
+            const string TeacherSecretCode = "A1111a!"; // Можно хранить в appsettings.json
+            if (model.Role == "Teacher" && model.TeacherCode != TeacherSecretCode)
+            {
+                ModelState.AddModelError(string.Empty, "Invalid teacher code.");
+                return View(model);
+            }
+
             var user = new User
             {
                 FullName = model.Name,
@@ -73,15 +81,15 @@ namespace Courses.Controllers
 
             if (result.Succeeded)
             {
-                var roleExist = await roleManager.RoleExistsAsync("User");
+                var roleExist = await roleManager.RoleExistsAsync(model.Role);
 
                 if (!roleExist)
                 {
-                    var role = new IdentityRole("User");
+                    var role = new IdentityRole(model.Role);
                     await roleManager.CreateAsync(role);
                 }
 
-                await userManager.AddToRoleAsync(user, "User");
+                await userManager.AddToRoleAsync(user, model.Role);
 
                 await signInManager.SignInAsync(user, isPersistent: false);
                 return RedirectToAction("Login", "Account");

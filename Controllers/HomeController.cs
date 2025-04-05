@@ -25,14 +25,14 @@ namespace Courses.Controllers
             return View();
         }
 
-        [Authorize(Roles = "Admin")]
-        public IActionResult Admin()
+        [Authorize(Roles = "Teacher")]
+        public IActionResult Teacher()
         {
             return View();
         }
 
-        [Authorize(Roles = "User")]
-        public IActionResult User()
+        [Authorize(Roles = "Student")]
+        public IActionResult Student()
         {
             return View();
         }

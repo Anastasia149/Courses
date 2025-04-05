@@ -21,5 +21,12 @@ namespace Courses.ViewModels
         [DataType(DataType.Password)]
         [Display(Name = "Confirm Password")]
         public string ConfirmPassword { get; set; }
+
+        [Required(ErrorMessage = "Role is required.")]
+        [Display(Name = "User Role")]
+        public string Role { get; set; } // "Student" или "Teacher"
+
+        [Display(Name = "Teacher Code")]
+        public string TeacherCode { get; set; } // Не обязательное поле, только для преподавателей
     }
 }
