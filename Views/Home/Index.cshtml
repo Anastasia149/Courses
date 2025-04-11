@@ -1,30 +1,42 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
+    Layout = "~/Views/Shared/_HeaderLayout.cshtml";
+
 }
 
-<div class="text-center py-5 my-5">
-    <h1 class="display-4 fw-bold mb-4">Платформа Courses для обучения и запуска ваших курсов</h1>
-    <p class="fs-4 text-muted mb-5">Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро</p>
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">Платформа Courses для обучения и запуска ваших курсов</h1>
 
-    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-        @if (!User.Identity.IsAuthenticated)
-        {
-            <!-- Для неавторизованных пользователей -->
-            <a href="../Account/Register" 
-               class="btn btn-primary btn-lg px-4 gap-3 rounded-3">Создать курс</a>
+        <p class="hero-subtitle">
+            Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
+        </p>
 
-            <a href="..Account/Register"
-               class="btn btn-outline-secondary btn-lg px-4 rounded-3">Присоединиться к курсу</a>
-        }
-        else if (User.IsInRole("Teacher"))
-        {
-            <!-- Для преподавателей показываем только кнопку "Создать курс" -->
-            <a asp-controller="Home" asp-action="Teacher" class="btn btn-primary btn-lg px-4 gap-3 rounded-3">Создать курс</a>
-        }
-        else if (User.IsInRole("Student"))
-        {
-            <!-- Для студентов показываем только кнопку "Присоединиться к курсу" -->
-            <a asp-controller="Home" asp-action="Student" class="btn btn-outline-secondary btn-lg px-4 rounded-3">Присоединиться к курсу</a>
-        }
+        <hr class="hero-divider">
+
+        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+            @if (!User.Identity.IsAuthenticated)
+            {
+                <a href="../Account/Register" class="btn hero-btn hero-btn-primary">
+                    Создать курс
+                </a>
+
+                <a href="../Account/Register" class="btn hero-btn hero-btn-outline">
+                    Присоединиться к курсу
+                </a>
+            }
+            else if (User.IsInRole("Teacher"))
+            {
+                <a asp-controller="Home" asp-action="Teacher" class="btn hero-btn hero-btn-primary">
+                    Создать курс
+                </a>
+            }
+            else if (User.IsInRole("Student"))
+            {
+                <a asp-controller="Home" asp-action="Student" class="btn hero-btn hero-btn-outline">
+                    Присоединиться к курсу
+                </a>
+            }
+        </div>
     </div>
 </div>
