@@ -20,7 +20,6 @@
 
         /* Отступ для основного контента */
         body {
-            padding-top: 40px;
             overflow-x: hidden; /* Предотвращаем горизонтальный скролл */
         }
 
@@ -75,5 +74,31 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+               document.addEventListener('DOMContentLoaded', function() {
+          const header = document.querySelector('.fixed-header');
+          const heroSection = document.querySelector('.hero-section');
+
+          function updateHeader() {
+            if (!heroSection) return;
+
+            const heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
+            const scrollPosition = window.scrollY || window.pageYOffset;
+
+            if (scrollPosition > heroBottom - 100) {
+              header.classList.add('scrolled');
+            } else {
+              header.classList.remove('scrolled');
+            }
+          }
+
+          // Инициализация
+          updateHeader();
+
+          // Слушатель скролла
+          window.addEventListener('scroll', updateHeader);
+        });
+    </script>   
 </body>
 </html>
