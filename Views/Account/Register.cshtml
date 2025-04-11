@@ -78,6 +78,7 @@
                         teacherCodeField.style.display = "block"; // Показываем поле
                     } else {
                         teacherCodeField.style.display = "none"; // Скрываем поле
+                        document.getElementById("TeacherCode").value = "";
                     }
                 }
 
@@ -90,4 +91,5 @@
         </script>
         await Html.RenderPartialAsync("_ValidationScriptsPartial.cshtml");
     }
+
 }

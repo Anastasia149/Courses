@@ -27,6 +27,6 @@ namespace Courses.ViewModels
         public string Role { get; set; } // "Student" или "Teacher"
 
         [Display(Name = "Teacher Code")]
-        public string TeacherCode { get; set; } // Не обязательное поле, только для преподавателей
+        public string? TeacherCode { get; set; } // Не обязательное поле, только для преподавателей
     }
 }
