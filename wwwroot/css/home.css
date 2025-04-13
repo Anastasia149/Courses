@@ -137,3 +137,37 @@
 .fixed-header.scrolled .navbar-toggler-icon {
     background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(0, 0, 0, 0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
 }
+
+/* Statistics Section */
+.stat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+.stat-value {
+    margin-bottom: 1rem;
+    line-height: 1.2;
+    color: #6b5942; /* Добавляем тёмно-бежевый цвет */
+}
+
+/* Новые стили для кнопок */
+.custom-btn {
+    background-color: #4b3f2f;
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+    .custom-btn:hover {
+        background-color: #3a3225;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }

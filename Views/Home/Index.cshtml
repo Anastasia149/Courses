@@ -27,7 +27,7 @@
             }
             else if (User.IsInRole("Teacher"))
             {
-                <a asp-controller="Home" asp-action="Teacher" class="btn hero-btn hero-btn-primary">
+                <a asp-controller="Home" asp-action="Teacher" class="btn hero-btn hero-btn-outline">
                     Создать курс
                 </a>
             }
@@ -41,18 +41,69 @@
     </div>
 </div>
 
-<p class="hero-subtitle">
-    Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
-</p>
+<section class="stats-section py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-4 fw-bold">70% онлайн-курсов по всему миру работает на Courses</h2>
+        </div>
 
-<p class="hero-subtitle">
-    Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
-</p>
+        <div class="row g-4">
+            <!-- Статистика 1 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card h-100 p-4 bg-light rounded-3">
+                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">168 млрд руб.</h3>
+                    <p class="stat-description">совокупный доход онлайн-школ на Courses<br>за 2024 год</p>
+                </div>
+            </div>
 
-<p class="hero-subtitle">
-    Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
-</p>
+            <!-- Статистика 2 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card h-100 p-4 bg-light rounded-3">
+                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">От 3800 руб. в месяц</h3>
+                    <p class="stat-description">Стоимость аренды сервиса Courses при оплате<br>за полгода</p>
+                </div>
+            </div>
 
-<p class="hero-subtitle">
-    Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
-</p>
+            <!-- Статистика 3 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card h-100 p-4 bg-light rounded-3">
+                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">19 000+ клиентов</h3>
+                    <p class="stat-description">в настоящий момент создают и продают курсы<br>на платформе Courses</p>
+                </div>
+            </div>
+
+            <!-- Статистика 4 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card h-100 p-4 bg-light rounded-3">
+                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">1 млн руб. в месяц</h3>
+                    <p class="stat-description">и более смогли заработать 5390 клиентов<br>в 2024 году</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="p-4 rounded-3">
+                    @if (!User.Identity.IsAuthenticated)
+                    {
+                        <a href="../Account/Register" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
+                            ЗАРЕГИСТРИРОВАТЬСЯ →
+                        </a>
+                    }
+                    else if (User.IsInRole("Student"))
+                    {
+                        <a asp-controller="Home" asp-action="Student" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
+                            НАЧАТЬ КУРС →
+                        </a>
+                    }
+                    else if (User.IsInRole("Teacher"))
+                    {
+                        <a asp-controller="Home" asp-action="Teacher" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
+                            СОЗДАТЬ КУРС →
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
