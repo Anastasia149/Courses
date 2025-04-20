@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Courses.Models;
+using Courses.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Courses.Controllers
@@ -8,10 +10,12 @@ namespace Courses.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly UserManager<User> _userManager;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, UserManager<User> userManager)
         {
             _logger = logger;
+            _userManager = userManager;
         }
 
         public IActionResult Index()
@@ -26,10 +30,48 @@ namespace Courses.Controllers
         }
 
         [Authorize(Roles = "Teacher")]
-        public IActionResult Teacher()
+        public async Task<IActionResult> Teacher()
         {
-            return View();
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new TeacherProfileViewModel
+            {
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber
+            };
+
+            return View(model);
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Teacher")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Teacher(TeacherProfileViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            user.PhoneNumber = model.PhoneNumber;
+            await _userManager.UpdateAsync(user);
+
+            return RedirectToAction(nameof(Teacher));
+        }
+
 
         [Authorize(Roles = "Student")]
         public IActionResult Student()
