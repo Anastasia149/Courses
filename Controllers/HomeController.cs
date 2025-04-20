@@ -43,7 +43,8 @@ namespace Courses.Controllers
             {
                 FullName = user.FullName,
                 Email = user.Email,
-                PhoneNumber = user.PhoneNumber
+                PhoneNumber = user.PhoneNumber,
+                ExistingAvatarPath = user.AvatarPath
             };
 
             return View(model);
@@ -54,22 +55,84 @@ namespace Courses.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Teacher(TeacherProfileViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
 
-            if (user == null)
+            // Сохраняем текущий путь для отображения в случае ошибки
+            model.ExistingAvatarPath = user.AvatarPath;
+
+            // Проверка файла аватара
+            if (model.AvatarFile != null && model.AvatarFile.Length > 0)
             {
-                return NotFound();
+                // Проверка размера (5MB максимум)
+                if (model.AvatarFile.Length > 5 * 1024 * 1024)
+                {
+                    ModelState.AddModelError("AvatarFile", "Максимальный размер файла - 5MB");
+                }
+
+                // Проверка расширения
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                var fileExtension = Path.GetExtension(model.AvatarFile.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    ModelState.AddModelError("AvatarFile", "Допустимые форматы: JPG, JPEG, PNG, GIF");
+                }
             }
 
-            user.PhoneNumber = model.PhoneNumber;
-            await _userManager.UpdateAsync(user);
+            if (ModelState.IsValid)
+            {
+                // Обработка аватара (только если файл был загружен)
+                if (model.AvatarFile != null && model.AvatarFile.Length > 0)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
 
-            return RedirectToAction(nameof(Teacher));
+                    // Создаём папку если её нет
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    // Уникальное имя файла
+                    var uniqueFileName = $"{user.Id}_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(model.AvatarFile.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    // Сохраняем файл
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.AvatarFile.CopyToAsync(fileStream);
+                    }
+
+                    // Удаляем старый аватар если он существует
+                    if (!string.IsNullOrEmpty(user.AvatarPath))
+                    {
+                        var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                            user.AvatarPath.TrimStart('/'));
+                        if (System.IO.File.Exists(oldFilePath))
+                            System.IO.File.Delete(oldFilePath);
+                    }
+
+                    // Обновляем путь к аватару
+                    user.AvatarPath = $"/avatars/{uniqueFileName}";
+                }
+
+                // Обновляем телефон
+                user.PhoneNumber = model.PhoneNumber;
+
+                // Сохраняем изменения в базе данных
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    // Если ошибка - добавляем в ModelState
+                    foreach (var error in result.Errors)
+                        ModelState.AddModelError(string.Empty, error.Description);
+
+                    return View(model);
+                }
+
+                TempData["SuccessMessage"] = "Профиль успешно обновлён!";
+                return RedirectToAction(nameof(Teacher));
+            }
+
+            // Если ModelState невалиден
+            return View(model);
         }
 
 

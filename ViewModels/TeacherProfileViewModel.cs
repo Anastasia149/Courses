@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace Courses.ViewModels
 {
@@ -13,5 +14,10 @@ namespace Courses.ViewModels
         [Display(Name = "Phone Number")]
         [Phone(ErrorMessage = "Invalid phone number")]
         public string? PhoneNumber { get; set; }
+        [Display(Name = "Current Avatar")]
+        public string? ExistingAvatarPath { get; set; }
+
+        [Display(Name = "Avatar Image")]
+        public IFormFile? AvatarFile { get; set; }
     }
 }

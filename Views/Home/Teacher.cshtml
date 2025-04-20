@@ -12,32 +12,111 @@
     </div>
 }
 
-<h2>Teacher Profile</h2>
+<h2>@ViewData["Title"]</h2>
 
-<form asp-action="Teacher" method="post">
-    <div class="form-group mb-3">
-        <label asp-for="FullName" class="form-label"></label>
-        <input asp-for="FullName" class="form-control" readonly />
+<!-- Основная форма -->
+<form asp-action="Teacher" method="post" enctype="multipart/form-data" class="row g-3">
+    <!-- Левая колонка - аватар -->
+    <div class="col-md-4">
+        <div class="card"> 
+            <div class="card-body text-center">
+                <!-- Текущий аватар -->
+                @if (!string.IsNullOrEmpty(Model.ExistingAvatarPath))
+                {
+                    <img id="currentAvatar" src="@Model.ExistingAvatarPath"
+                         class="img-thumbnail rounded-circle mb-3"
+                         style="width: 200px; height: 200px; object-fit: cover;"
+                         alt="Текущий аватар">
+                }
+                else
+                {
+                    <div id="currentAvatar" class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3"
+                         style="width: 200px; height: 200px;">
+                        <i class="fas fa-user fa-4x text-secondary"></i>
+                    </div>
+                }
+
+                <!-- Поле для загрузки нового аватара -->
+                <div class="mb-3">
+                    <label asp-for="AvatarFile" class="form-label">Загрузить новый аватар</label>
+                    <input asp-for="AvatarFile" class="form-control"
+                           accept=".jpg,.jpeg,.png,.gif"
+                           onchange="previewAvatar(this)">
+                    <div class="form-text">Допустимые форматы: JPG, PNG до 5MB</div>
+                    <span asp-validation-for="AvatarFile" class="text-danger"></span>
+                </div>
+
+                <!-- Превью нового аватара (скрыто по умолчанию) -->
+                <img id="avatarPreview" class="img-thumbnail rounded-circle mt-2 d-none"
+                     style="width: 200px; height: 200px; object-fit: cover;"
+                     alt="Превью нового аватара">
+            </div>
+        </div>
     </div>
 
-    <div class="form-group mb-3">
-        <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control" readonly />
-    </div>
+    <!-- Правая колонка - данные профиля -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <!-- Поле "Полное имя" -->
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" readonly>
+                </div>
 
-    <div class="form-group mb-3">
-        <label asp-for="PhoneNumber" class="form-label"></label>
-        <input asp-for="PhoneNumber" class="form-control" />
-        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-    </div>
+                <!-- Поле "Email" -->
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" readonly>
+                </div>
 
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+                <!-- Поле "Номер телефона" -->
+                <div class="mb-3">
+                    <label asp-for="PhoneNumber" class="form-label"></label>
+                    <input asp-for="PhoneNumber" class="form-control">
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+
+                <!-- Кнопка сохранения -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save me-2"></i>Сохранить изменения
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </form>
+</div>
 
 @section Scripts {
+    <!-- Подключение стандартных скриптов валидации -->
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <!-- Скрипт для предпросмотра аватара -->
+    <script>
+        function previewAvatar(input) {
+            const currentAvatar = document.getElementById('currentAvatar');
+            const preview = document.getElementById('avatarPreview');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    // Показываем превью и скрываем текущий аватар
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                    currentAvatar.classList.add('d-none');
+                }
+
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                // Если файл не выбран, показываем текущий аватар
+                preview.classList.add('d-none');
+                currentAvatar.classList.remove('d-none');
+            }
+        }
+    </script>
 }
