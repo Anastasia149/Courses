@@ -1,8 +1,9 @@
-﻿@using Courses.ViewModels;
-@model TeacherProfileViewModel;
+﻿@using Courses.ViewModels
+@model TeacherProfileViewModel
 
 @{
     ViewData["Title"] = "Teacher Profile";
+    <link rel="stylesheet" href="~/css/teacher.css" asp-append-version="true" />
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -14,88 +15,78 @@
 
 <h2>@ViewData["Title"]</h2>
 
-<!-- Основная форма -->
-<form asp-action="Teacher" method="post" enctype="multipart/form-data" class="row g-3">
-    <!-- Левая колонка - аватар -->
-    <div class="col-md-4">
-        <div class="card"> 
-            <div class="card-body text-center">
-                <!-- Текущий аватар -->
-                @if (!string.IsNullOrEmpty(Model.ExistingAvatarPath))
-                {
-                    <img id="currentAvatar" src="@Model.ExistingAvatarPath"
-                         class="img-thumbnail rounded-circle mb-3"
-                         style="width: 200px; height: 200px; object-fit: cover;"
-                         alt="Текущий аватар">
-                }
-                else
-                {
-                    <div id="currentAvatar" class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3"
-                         style="width: 200px; height: 200px;">
-                        <i class="fas fa-user fa-4x text-secondary"></i>
+<div class="teacher-profile-container">
+    <form asp-action="Teacher" method="post" enctype="multipart/form-data">
+        <div class="row equal-height">
+            <!-- Левая колонка - аватар -->
+            <div class="col-md-4">
+                <div class="avatar-section h-100 d-flex flex-column">
+                    <div class="flex-grow-1 d-flex flex-column justify-content-center">
+                        <div class="avatar-wrapper mx-auto">
+                            @if (!string.IsNullOrEmpty(Model.ExistingAvatarPath))
+                            {
+                                <img id="currentAvatar" src="@Model.ExistingAvatarPath"
+                                     class="avatar-image"
+                                     alt="Current Avatar">
+                            }
+                            else
+                            {
+                                <div id="currentAvatar" class="avatar-placeholder">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            }
+                            <img id="avatarPreview" class="avatar-preview" alt="Avatar Preview">
+                        </div>
                     </div>
-                }
 
-                <!-- Поле для загрузки нового аватара -->
-                <div class="mb-3">
-                    <label asp-for="AvatarFile" class="form-label">Загрузить новый аватар</label>
-                    <input asp-for="AvatarFile" class="form-control"
-                           accept=".jpg,.jpeg,.png,.gif"
-                           onchange="previewAvatar(this)">
-                    <div class="form-text">Допустимые форматы: JPG, PNG до 5MB</div>
-                    <span asp-validation-for="AvatarFile" class="text-danger"></span>
+                    <div class="text-center mt-auto pt-3">
+                        <label class="btn btn-outline-primary avatar-upload-btn">
+                            <i class="fas fa-camera me-2"></i>Изменить аватар
+                            <input asp-for="AvatarFile" class="d-none"
+                                   accept=".jpg,.jpeg,.png,.gif"
+                                   onchange="previewAvatar(this)">
+                        </label>
+                        <span asp-validation-for="AvatarFile" class="text-danger d-block mt-2"></span>
+                    </div>
                 </div>
-
-                <!-- Превью нового аватара (скрыто по умолчанию) -->
-                <img id="avatarPreview" class="img-thumbnail rounded-circle mt-2 d-none"
-                     style="width: 200px; height: 200px; object-fit: cover;"
-                     alt="Превью нового аватара">
             </div>
-        </div>
-    </div>
 
-    <!-- Правая колонка - данные профиля -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <!-- Поле "Полное имя" -->
-                <div class="mb-3">
-                    <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" readonly>
-                </div>
+            <!-- Правая колонка - информация -->
+            <div class="col-md-8">
+                <div class="info-section h-100 d-flex flex-column">
+                    <div class="flex-grow-1">
+                        <div class="mb-3">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" readonly>
+                        </div>
 
-                <!-- Поле "Email" -->
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label"></label>
-                    <input asp-for="Email" class="form-control" readonly>
-                </div>
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" class="form-control" readonly>
+                        </div>
 
-                <!-- Поле "Номер телефона" -->
-                <div class="mb-3">
-                    <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" class="form-control">
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-                </div>
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" class="form-control">
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+                    </div>
 
-                <!-- Кнопка сохранения -->
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="fas fa-save me-2"></i>Сохранить изменения
-                    </button>
+                    <div class="mt-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Сохранить изменения
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</form>
+    </form>
 </div>
 
 @section Scripts {
-    <!-- Подключение стандартных скриптов валидации -->
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
-    <!-- Скрипт для предпросмотра аватара -->
     <script>
         function previewAvatar(input) {
             const currentAvatar = document.getElementById('currentAvatar');
@@ -103,19 +94,15 @@
 
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-
                 reader.onload = function(e) {
-                    // Показываем превью и скрываем текущий аватар
                     preview.src = e.target.result;
-                    preview.classList.remove('d-none');
-                    currentAvatar.classList.add('d-none');
+                    preview.style.display = 'block';
+                    currentAvatar.style.display = 'none';
                 }
-
                 reader.readAsDataURL(input.files[0]);
             } else {
-                // Если файл не выбран, показываем текущий аватар
-                preview.classList.add('d-none');
-                currentAvatar.classList.remove('d-none');
+                preview.style.display = 'none';
+                currentAvatar.style.display = 'block';
             }
         }
     </script>
