@@ -8,7 +8,7 @@
 
 <div class="account-container">
     <div class="account-box">
-        <h2 class="text-center mb-4">Register</h2>
+        <h2 class="text-center mb-4">Регистрация</h2>
         <form asp-action="Register" method="post">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -38,28 +38,28 @@
 
             <!-- Выбор роли (Student / Teacher) -->
             <div class="mb-3">
-                <label asp-for="Role" class="form-label">User Role</label>
+                <label asp-for="Role" class="form-label">Роль</label>
                 <select asp-for="Role" class="form-control" id="roleSelect">
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
+                    <option value="Student">Студент</option>
+                    <option value="Teacher">Преподаватель</option>
                 </select>
                 <span asp-validation-for="Role" class="text-danger"></span>
             </div>
 
             <!-- Поле "Teacher Code" (по умолчанию скрыто) -->
             <div class="mb-3" id="teacherCodeField" style="display: none;">
-                <label asp-for="TeacherCode" class="form-label">Teacher Code</label>
+                <label asp-for="TeacherCode" class="form-label">Код</label>
                 <input asp-for="TeacherCode" class="form-control" />
                 <span asp-validation-for="TeacherCode" class="text-danger"></span>
             </div>
 
-            <input type="submit" value="Register" class="btn btn-success w-100 p-2" />
+            <input type="submit" value="Регистрация" class="btn btn-success w-100 p-2" />
             <p class="text-center mt-2">
-                Already have an account? <a asp-controller="Account" asp-action="Login" class="text-decoration-none">Login</a>
+                Есть аккаунт? <a asp-controller="Account" asp-action="Login" class="text-decoration-none">Вход</a>
             </p>
 
             <div class="text-center">
-                <a asp-controller="Home" asp-action="Index" class="text-decoration-none mt-3">Back</a>
+                <a asp-controller="Home" asp-action="Index" class="text-decoration-none mt-3">Вернуться</a>
             </div>
         </form>
     </div>

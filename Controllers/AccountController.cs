@@ -41,7 +41,7 @@ namespace Courses.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ModelState.AddModelError(string.Empty, "Invalid Login Attempt.");
+            ModelState.AddModelError(string.Empty, "Неверная попытка входа.");
             return View(model);
         }
 
@@ -64,7 +64,7 @@ namespace Courses.Controllers
             const string TeacherSecretCode = "A1111a!"; // Можно хранить в appsettings.json
             if (model.Role == "Teacher" && model.TeacherCode != TeacherSecretCode)
             {
-                ModelState.AddModelError(string.Empty, "Invalid teacher code.");
+                ModelState.AddModelError(string.Empty, "Неверный код преподавателя.");
                 return View(model);
             }
 
@@ -122,7 +122,7 @@ namespace Courses.Controllers
 
             if (user == null)
             {
-                ModelState.AddModelError("", "User not found!");
+                ModelState.AddModelError("", "Пользователь не найден!");
                 return View(model);
             }
             else
@@ -147,7 +147,7 @@ namespace Courses.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("", "Something went wrong");
+                ModelState.AddModelError("", "Что-то пошло не так...");
                 return View(model);
             }
 
@@ -155,7 +155,7 @@ namespace Courses.Controllers
 
             if (user == null)
             {
-                ModelState.AddModelError("", "User not found!");
+                ModelState.AddModelError("", "Пользователь не найден!");
                 return View(model);
             }
 

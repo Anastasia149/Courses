@@ -4,15 +4,16 @@ namespace Courses.ViewModels
 {
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "Email is required.")]
+        [Required(ErrorMessage = "Требуется Email.")]
         [EmailAddress]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Password is required.")]
+        [Display(Name = "Пароль")]
+        [Required(ErrorMessage = "Требуется пароль.")]
         [DataType(DataType.Password)]
         public string Password { get; set; }
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Запомнить меня?")]
         public bool RememberMe { get; set; }
     }
 }

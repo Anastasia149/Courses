@@ -4,7 +4,7 @@ namespace Courses.ViewModels
 {
     public class VerifyEmailViewModel
     {
-        [Required(ErrorMessage = "Email is required.")]
+        [Required(ErrorMessage = "Требуется Email.")]
         [EmailAddress]
         public string Email { get; set; }
     }

@@ -23,13 +23,13 @@
                         @if (User.IsInRole("Teacher"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Home" asp-action="Teacher">Teacher</a>
+                                <a class="nav-link" asp-controller="Home" asp-action="Teacher">Кабинет</a>
                             </li>
                         }
                         @if (User.IsInRole("Student"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Home" asp-action="Student">Student</a>
+                                <a class="nav-link" asp-controller="Home" asp-action="Student">Кабинет</a>
                             </li>
                         }
                         <partial name="_LoginPartial"/>

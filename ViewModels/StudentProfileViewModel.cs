@@ -4,19 +4,19 @@ namespace Courses.ViewModels
 {
     public class StudentProfileViewModel
     {
-        [Display(Name = "Full Name")]
+        [Display(Name = "Имя")]
         public string FullName { get; set; }
 
         [Display(Name = "Email")]
         public string Email { get; set; }
 
-        [Display(Name = "Phone Number")]
-        [Phone(ErrorMessage = "Invalid phone number")]
+        [Display(Name = "Номер телефона")]
+        [Phone(ErrorMessage = "Некорректный номер телефона")]
         public string? PhoneNumber { get; set; }
-        [Display(Name = "Current Avatar")]
+        [Display(Name = "Текущий аватар")]
         public string? ExistingAvatarPath { get; set; }
 
-        [Display(Name = "Avatar Image")]
+        [Display(Name = "Изображение аватара")]
         public IFormFile? AvatarFile { get; set; }
     }
 }

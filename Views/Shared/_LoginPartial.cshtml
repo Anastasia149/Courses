@@ -7,7 +7,7 @@
         <li class="nav-item">
             <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-link nav-link text-dark p-0">Logout</button>
+                <button type="submit" class="btn btn-link nav-link text-dark p-0">Выход</button>
             </form>
         </li>
     }
@@ -15,12 +15,12 @@
     {
         <li class="nav-item">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">
-                Login
+                Вход
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">
-                Register
+                Регистрация
             </a>
         </li>
     }

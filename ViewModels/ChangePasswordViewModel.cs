@@ -4,20 +4,20 @@ namespace Courses.ViewModels
 {
     public class ChangePasswordViewModel
     {
-        [Required(ErrorMessage = "Email is required.")]
+        [Required(ErrorMessage = "Требуется Email.")]
         [EmailAddress]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Password is required.")]
-        [StringLength(40, MinimumLength = 8, ErrorMessage = "The {0} must be at {2} and at max {1} characters long.")]
+        [Required(ErrorMessage = "Требуется пароль.")]
+        [StringLength(40, MinimumLength = 8, ErrorMessage = "{0} должен быть длиной {2} и иметь максимальную длину {1} ​​символов.")]
         [DataType(DataType.Password)]
-        [Display(Name = "New Password")]
-        [Compare("ConfirmNewPassword", ErrorMessage = "Password does not match.")]
+        [Display(Name = "Новый пароль")]
+        [Compare("ConfirmNewPassword", ErrorMessage = "Пароль не совпадает")]
         public string NewPassword { get; set; }
 
-        [Required(ErrorMessage = "Confirm Password is required.")]
+        [Required(ErrorMessage = "Требуется подтверждение пароля.")]
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm New Password")]
+        [Display(Name = "Подтверждение нового пароля")]
         public string ConfirmNewPassword { get; set; }
     }
 }
