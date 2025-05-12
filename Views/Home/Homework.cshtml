@@ -1,0 +1,167 @@
+﻿@using Courses.ViewModels;
+@model ReviewHomeworkViewModel
+@{
+    ViewData["Title"] = $"Проверка ДЗ: {Model.Homework.Lesson.Title}";
+    <link rel="stylesheet" href="~/css/homework.css" asp-append-version="true" />
+}
+
+<div class="container homework-review-container mt-4">
+    <!-- Хлебные крошки и заголовок -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a asp-controller="Teacher" asp-action="Index">Мои курсы</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@Model.Homework.Lesson.Course.Id">
+                    @Model.Homework.Lesson.Course.Title
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Проверка ДЗ</li>
+        </ol>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>@Model.Homework.Lesson.Title
+                </h3>
+                <span class="badge bg-@GetStatusBadgeClass(Model.Homework.Status) fs-6">
+                    @GetStatusDisplayName(Model.Homework.Status)
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Информация о студенте -->
+            <div class="student-info-section mb-4 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(Model.Homework.Student.AvatarPath))
+                            {
+                                <img src="@Model.Homework.Student.AvatarPath"
+                                     class="rounded-circle me-3"
+                                     width="60" height="60"
+                                     alt="Аватар студента">
+                            }
+                            <div>
+                                <h5 class="mb-1">@Model.Homework.Student.FullName</h5>
+                                <small class="text-muted">@Model.Homework.Student.Email</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="mt-2 mt-md-0">
+                            <div class="text-muted small">Дата сдачи:</div>
+                            <div class="fw-bold">@Model.Homework.SubmittedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ответ студента -->
+            <div class="answer-section mb-4">
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-file-alt me-2"></i>Ответ студента
+                </h5>
+                <div class="answer-content p-3 bg-light rounded">
+                    @if (!string.IsNullOrEmpty(Model.Homework.Answer))
+                    {
+                        @Html.Raw(Model.Homework.Answer)
+                    }
+                    else
+                    {
+                        <div class="text-muted">Студент не предоставил ответ</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Форма проверки -->
+            <form asp-controller="Teacher" asp-action="ReviewHomework" method="post" class="review-form">
+                <input type="hidden" asp-for="Homework.Id" />
+
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-check-circle me-2"></i>Оценка работы
+                </h5>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Status" class="form-label">Статус проверки</label>
+                        <select asp-for="Status" class="form-select">
+                            <option value="@HomeworkStatus.Approved">✅ Принято</option>
+                            <option value="@HomeworkStatus.Rejected">❌ Требует доработки</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Дата проверки</label>
+                        <input type="text" class="form-control"
+                               value="@DateTime.Now.ToString("dd.MM.yyyy HH:mm")" disabled>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Feedback" class="form-label">Развернутый комментарий</label>
+                    <textarea asp-for="Feedback" class="form-control" rows="6"
+                              placeholder="Укажите ошибки, дайте рекомендации..."></textarea>
+                    <span asp-validation-for="Feedback" class="text-danger small"></span>
+                    <div class="form-text">Комментарий будет виден студенту</div>
+                </div>
+
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <a asp-action="CourseDetails" asp-route-id="@Model.Homework.Lesson.Course.Id"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save me-2"></i>Сохранить оценку
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Подсветка текста при фокусе
+            $('textarea').focus(function() {
+                $(this).parent().addClass('active-feedback');
+            }).blur(function() {
+                $(this).parent().removeClass('active-feedback');
+            });
+
+            // Можно добавить редактор Markdown
+            // initializeMarkdownEditor('textarea');
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusBadgeClass(HomeworkStatus status)
+    {
+        return status switch
+        {
+            HomeworkStatus.Approved => "success",
+            HomeworkStatus.Rejected => "danger",
+            _ => "warning",
+        };
+    }
+
+    string GetStatusDisplayName(HomeworkStatus status)
+    {
+        return status switch
+        {
+            HomeworkStatus.Approved => "Принято",
+            HomeworkStatus.Rejected => "Отклонено",
+            HomeworkStatus.Pending => "На проверке",
+            _ => status.ToString(),
+        };
+    }
+}

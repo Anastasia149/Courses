@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using Courses.Data;
 using Courses.Models;
 using Courses.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Courses.Controllers
 {
@@ -11,11 +13,16 @@ namespace Courses.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<User> _userManager;
+        private readonly AppDbContext _context;
 
-        public HomeController(ILogger<HomeController> logger, UserManager<User> userManager)
+        public HomeController(
+            ILogger<HomeController> logger,
+            UserManager<User> userManager,
+            AppDbContext context)
         {
             _logger = logger;
             _userManager = userManager;
+            _context = context;
         }
 
         public IActionResult Index()
@@ -27,6 +34,51 @@ namespace Courses.Controllers
         public IActionResult Privacy()
         {
             return View();
+        }
+
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> Course()
+        {
+            try
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                var courses = await _context.Courses
+                    .Include(c => c.Lessons)
+                    .ThenInclude(l => l.Homeworks)
+                    .Where(c => c.TeacherId == teacherId)
+                    .ToListAsync();
+
+                var model = new TeacherCoursesViewModel
+                {
+                    Courses = courses
+                };
+
+                if (courses.Any())
+                {
+                    var firstCourse = courses.First();
+
+                    model.SelectedCourse = new CourseDetailsViewModel
+                    {
+                        Course = firstCourse,
+                        EnrolledStudentsCount = await _context.UserCourses
+                            .CountAsync(uc => uc.CourseId == firstCourse.Id),
+                        PendingHomeworks = await _context.Homeworks
+                            .Include(h => h.Student)
+                            .Include(h => h.Lesson)
+                            .Where(h => h.Lesson.CourseId == firstCourse.Id &&
+                                       h.Status == HomeworkStatus.Pending)
+                            .ToListAsync()
+                    };
+                }
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка в методе Course");
+                return StatusCode(500, "Произошла ошибка при загрузке данных");
+            }
         }
 
         [Authorize(Roles = "Teacher")]

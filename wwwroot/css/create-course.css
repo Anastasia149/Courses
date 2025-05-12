@@ -1,0 +1,55 @@
+﻿.create-course-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.image-upload-container {
+    border: 2px dashed #ddd;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+    .image-upload-container:hover {
+        border-color: #aaa;
+    }
+
+.image-preview {
+    width: 100%;
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+    .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.image-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #6c757d;
+    text-align: center;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .image-preview {
+        height: 150px;
+    }
+}

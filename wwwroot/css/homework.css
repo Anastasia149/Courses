@@ -1,0 +1,35 @@
+﻿/* Основные стили */
+.homework-review-container {
+    max-width: 1200px;
+}
+
+/* Секция информации о студенте */
+.student-info-section {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+}
+
+/* Ответ студента */
+.answer-content {
+    min-height: 100px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+/* Активная форма */
+.review-form .active-feedback textarea {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .student-info-section .col-md-6 {
+        margin-bottom: 1rem;
+    }
+
+    .student-info-section .text-md-end {
+        text-align: left !important;
+    }
+}

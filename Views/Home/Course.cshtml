@@ -1,0 +1,305 @@
+﻿@using Courses.ViewModels;
+@model TeacherCoursesViewModel
+@{
+    ViewData["Title"] = "Мои курсы";
+    <link rel="stylesheet" href="~/css/course.css" />
+}
+
+<div class="teacher-courses-container">
+    <!-- Заголовок и кнопка создания -->
+    <div class="courses-header">
+        <h1 class="courses-title">Мои курсы</h1>
+        <a asp-controller="Teacher" asp-action="CreateCourse" class="btn btn-primary btn-create-course">
+            <i class="fas fa-plus"></i> Создать курс
+        </a>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="courses-content">
+        <!-- Список курсов -->
+        <div class="courses-sidebar">
+            <div class="card courses-list-card">
+                <div class="card-header">
+                    <h5>Все курсы <span class="badge bg-secondary">@Model.Courses.Count</span></h5>
+                </div>
+                <div class="list-group courses-list">
+                    @foreach (var course in Model.Courses)
+                    {
+                        <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
+                           class="list-group-item list-group-item-action course-item @(Model.SelectedCourse?.Course.Id == course.Id ? "active" : "")">
+                            <div class="course-item-content">
+                                <h6 class="course-title">@course.Title</h6>
+                                <div class="course-meta">
+                                    <span class="badge students-count">
+                                        <i class="fas fa-users"></i> @course.UserCourses.Count
+                                    </span>
+                                    @if (course.Lessons.Any(l => l.Homeworks.Any(h => h.Status == HomeworkStatus.Pending)))
+                                    {
+                                        <span class="badge homeworks-count">
+                                            <i class="fas fa-tasks"></i> @course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Pending))
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Детали курса -->
+        <div class="course-details-container">
+            @if (Model.SelectedCourse != null)
+            {
+                <div class="card course-details-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">@Model.SelectedCourse.Course.Title</h4>
+                            <div class="course-actions">
+                                <a asp-action="EditCourse" asp-route-id="@Model.SelectedCourse.Course.Id"
+                                   class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </a>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        onclick="showCreateLessonModal(@Model.SelectedCourse.Course.Id)">
+                                    <i class="fas fa-plus"></i> Добавить урок
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Навигация -->
+                        <ul class="nav nav-tabs" id="courseTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                                    Обзор
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#lessons" type="button">
+                                    Уроки (@Model.SelectedCourse.Course.Lessons.Count)
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#homeworks" type="button">
+                                    ДЗ на проверку (@Model.SelectedCourse.PendingHomeworks.Count)
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Содержимое вкладок -->
+                        <div class="tab-content mt-3">
+                            <!-- Вкладка "Обзор" -->
+                            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                                <div class="row stats-row">
+                                    <div class="col-md-4">
+                                        <div class="stat-card stat-students">
+                                            <div class="stat-icon">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                            <div class="stat-content">
+                                                <div class="stat-title">Студентов</div>
+                                                <div class="stat-value">@Model.SelectedCourse.EnrolledStudentsCount</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-card stat-lessons">
+                                            <div class="stat-icon">
+                                                <i class="fas fa-book-open"></i>
+                                            </div>
+                                            <div class="stat-content">
+                                                <div class="stat-title">Уроков</div>
+                                                <div class="stat-value">@Model.SelectedCourse.Course.Lessons.Count</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-card stat-homeworks">
+                                            <div class="stat-icon">
+                                                <i class="fas fa-tasks"></i>
+                                            </div>
+                                            <div class="stat-content">
+                                                <div class="stat-title">ДЗ на проверку</div>
+                                                <div class="stat-value">@Model.SelectedCourse.PendingHomeworks.Count</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="course-description mt-4">
+                                    <h5>Описание курса</h5>
+                                    <div class="description-content">
+                                        @if (!string.IsNullOrEmpty(Model.SelectedCourse.Course.Description))
+                                        {
+                                            @Html.Raw(Model.SelectedCourse.Course.Description)
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted">Описание отсутствует</div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Вкладка "Уроки" -->
+                            <div class="tab-pane fade" id="lessons" role="tabpanel">
+                                @if (Model.SelectedCourse.Course.Lessons.Any())
+                                {
+                                    <div class="lessons-list">
+                                        @foreach (var lesson in Model.SelectedCourse.Course.Lessons.OrderBy(l => l.Order))
+                                        {
+                                            <div class="lesson-item">
+                                                <div class="lesson-header">
+                                                    <div class="lesson-order">@lesson.Order.</div>
+                                                    <h5 class="lesson-title">@lesson.Title</h5>
+                                                </div>
+                                                <div class="lesson-meta">
+                                                    <span class="badge bg-light text-dark">
+                                                        <i class="fas fa-file-alt"></i> @lesson.Homeworks.Count работ
+                                                    </span>
+                                                    <div class="lesson-actions">
+                                                        <a asp-action="EditLesson" asp-route-id="@lesson.Id"
+                                                           class="btn btn-sm btn-outline-secondary me-2">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <form asp-action="DeleteLesson" method="post"
+                                                              onsubmit="return confirm('Удалить этот урок?')">
+                                                            <input type="hidden" name="id" value="@lesson.Id" />
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info">
+                                        В этом курсе пока нет уроков
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Вкладка "Домашние задания" -->
+                            <div class="tab-pane fade" id="homeworks" role="tabpanel">
+                                @if (Model.SelectedCourse.PendingHomeworks.Any())
+                                {
+                                    <div class="homeworks-list">
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Студент</th>
+                                                    <th>Урок</th>
+                                                    <th>Дата сдачи</th>
+                                                    <th>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var hw in Model.SelectedCourse.PendingHomeworks)
+                                                {
+                                                    <tr>
+                                                        <td>@hw.Student.FullName</td>
+                                                        <td>@hw.Lesson.Title</td>
+                                                        <td>@hw.SubmittedAt.ToString("dd.MM.yyyy")</td>
+                                                        <td>
+                                                            <a asp-action="ReviewHomework" asp-route-homeworkId="@hw.Id"
+                                                               class="btn btn-sm btn-primary">
+                                                                <i class="fas fa-check"></i> Проверить
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i> Все работы проверены!
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h4>Выберите курс</h4>
+                    <p class="text-muted">Для просмотра деталей выберите курс из списка</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания урока -->
+<div class="modal fade" id="createLessonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить урок</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createLessonForm" asp-action="AddLesson" method="post">
+                <input type="hidden" name="courseId" id="modal-course-id" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название урока</label>
+                        <input type="text" class="form-control" name="Title" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Порядковый номер</label>
+                        <input type="number" class="form-control" name="Order" min="1" value="1" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Содержание</label>
+                        <textarea class="form-control" name="Content" rows="5"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Показ модального окна создания урока
+        function showCreateLessonModal(courseId) {
+            $('#modal-course-id').val(courseId);
+            $('#createLessonModal').modal('show');
+        }
+
+        // Обработка формы создания урока
+        $('#createLessonForm').submit(function(e) {
+            e.preventDefault();
+            $.post($(this).attr('action'), $(this).serialize(), function() {
+                $('#createLessonModal').modal('hide');
+                window.location.reload();
+            });
+        });
+
+        // Инициализация табов
+        $(document).ready(function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab) {
+                $(`#courseTabs button[data-bs-target="#${tab}"]`).tab('show');
+            }
+        });
+    </script>
+}
