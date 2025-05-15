@@ -8,7 +8,7 @@
 <div class="course-details-container">
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Course">Мои курсы</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Teacher" asp-action="Index">Мои курсы</a></li>
             <li class="breadcrumb-item active">@Model.Course.Title</li>
         </ol>
     </nav>
@@ -16,39 +16,18 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-tasks me-2"></i>Домашние задания</h2>
         <div class="btn-group" role="group">
+            <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@Model.Course.Id"
+               class="btn @(Model.CurrentStatus == null ? "btn-primary" : "btn-outline-primary")">
+                Все работы
+            </a>
             <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@Model.Course.Id" asp-route-status="Pending"
-               class="btn @(ViewBag.CurrentStatus == HomeworkStatus.Pending ? "btn-primary" : "btn-outline-primary")">
-                На проверку
+               class="btn @(Model.CurrentStatus == HomeworkStatus.Pending ? "btn-warning" : "btn-outline-warning")">
+                На проверку (@Model.Course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Pending)))
             </a>
             <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@Model.Course.Id" asp-route-status="Approved"
-               class="btn @(ViewBag.CurrentStatus == HomeworkStatus.Approved ? "btn-success" : "btn-outline-success")">
-                Проверенные
+               class="btn @(Model.CurrentStatus == HomeworkStatus.Approved ? "btn-success" : "btn-outline-success")">
+                Проверенные (@Model.Course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Approved)))
             </a>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="stat-card">
-                <div class="stat-icon bg-primary">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <h5>@Model.EnrolledStudentsCount</h5>
-                    <p>Студентов</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="stat-card">
-                <div class="stat-icon bg-warning">
-                    <i class="fas fa-tasks"></i>
-                </div>
-                <div class="stat-content">
-                    <h5>@Model.PendingHomeworks.Count</h5>
-                    <p>Работ</p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -80,10 +59,11 @@
                                     </td>
                                     <td>@hw.SubmittedAt.ToString("dd.MM.yyyy")</td>
                                     <td>
-                                        <a asp-action="ReviewHomework"
+                                        <a asp-controller="Teacher"
+                                            asp-action="ReviewHomework"
                                            asp-route-homeworkId="@hw.Id"
-                                           class="btn btn-sm btn-primary">
-                                            Проверить
+                                           class="btn btn-sm @(hw.Status == HomeworkStatus.Approved ? "btn-info" : "btn-primary")">
+                                            @(hw.Status == HomeworkStatus.Approved ? "Просмотр" : "Проверить")
                                         </a>
                                     </td>
                                 </tr>
@@ -94,8 +74,12 @@
             }
             else
             {
-                <div class="alert alert-info">
-                    Нет работ для отображения
+                <div class="alert @(Model.CurrentStatus == HomeworkStatus.Approved ? "alert-success" : "alert-info")">
+                    <i class="fas @(Model.CurrentStatus == HomeworkStatus.Approved ? "fa-check-circle" : "fa-info-circle")"></i>
+                    @(Model.CurrentStatus == HomeworkStatus.Approved ?
+                        "Нет проверенных работ" :
+                        Model.CurrentStatus == HomeworkStatus.Pending ?
+                        "Нет работ на проверке" : "Нет домашних заданий")
                 </div>
             }
         </div>

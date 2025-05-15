@@ -15,6 +15,9 @@ namespace Courses.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public string? Category { get; set; }
+        public string? DifficultyLevel { get; set; }
+
         // Связи
         public string TeacherId { get; set; } // ID преподавателя (связь с User)
         public User Teacher { get; set; }

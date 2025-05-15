@@ -7,5 +7,7 @@ namespace Courses.ViewModels
         public List<Course> Courses { get; set; }
         public int? SelectedCourseId { get; set; }
         public CourseDetailsViewModel SelectedCourse { get; set; }
+        public HomeworkStatus? CurrentStatus { get; set; }
+
     }
 }

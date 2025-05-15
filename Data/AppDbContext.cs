@@ -44,6 +44,7 @@ namespace Courses.Data
             builder.Entity<Homework>()
                 .Property(h => h.Status)
                 .HasConversion<string>(); // Для хранения enum как строки в БД
+
         }
     }
 }

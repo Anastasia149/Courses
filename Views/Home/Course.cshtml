@@ -25,23 +25,25 @@
                 <div class="list-group courses-list">
                     @foreach (var course in Model.Courses)
                     {
-                        <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
-                           class="list-group-item list-group-item-action course-item @(Model.SelectedCourse?.Course.Id == course.Id ? "active" : "")">
-                            <div class="course-item-content">
-                                <h6 class="course-title">@course.Title</h6>
-                                <div class="course-meta">
-                                    <span class="badge students-count">
-                                        <i class="fas fa-users"></i> @course.UserCourses.Count
-                                    </span>
-                                    @if (course.Lessons.Any(l => l.Homeworks.Any(h => h.Status == HomeworkStatus.Pending)))
-                                    {
-                                        <span class="badge homeworks-count">
-                                            <i class="fas fa-tasks"></i> @course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Pending))
+                        <div class="list-group-item course-item @(Model.SelectedCourse?.Course.Id == course.Id ? "active" : "")">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
+                                   class="course-item-content flex-grow-1 text-decoration-none text-dark">
+                                    <h6 class="course-title mb-1">@course.Title</h6>
+                                    <div class="course-meta">
+                                        <span class="badge students-count">
+                                            <i class="fas fa-users"></i> @course.UserCourses.Count
                                         </span>
-                                    }
-                                </div>
+                                        @if (course.Lessons.Any(l => l.Homeworks.Any(h => h.Status == HomeworkStatus.Pending)))
+                                        {
+                                            <span class="badge homeworks-count">
+                                                <i class="fas fa-tasks"></i> @course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Pending))
+                                            </span>
+                                        }
+                                    </div>
+                                </a>
                             </div>
-                        </a>
+                        </div>
                     }
                 </div>
             </div>
@@ -56,14 +58,52 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h4 class="mb-0">@Model.SelectedCourse.Course.Title</h4>
                             <div class="course-actions">
-                                <a asp-action="EditCourse" asp-route-id="@Model.SelectedCourse.Course.Id"
-                                   class="btn btn-sm btn-outline-secondary me-2">
-                                    <i class="fas fa-edit"></i> Редактировать
-                                </a>
-                                <button class="btn btn-sm btn-outline-primary"
-                                        onclick="showCreateLessonModal(@Model.SelectedCourse.Course.Id)">
-                                    <i class="fas fa-plus"></i> Добавить урок
-                                </button>
+                                <!-- Заменяем текущие кнопки на dropdown -->
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown">
+                                        <i class="fas fa-cog"></i> Действия
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item"
+                                               asp-controller="Teacher"
+                                               asp-action="EditCourse"
+                                               asp-route-id="@Model.SelectedCourse.Course.Id">
+                                                <i class="fas fa-edit me-1"></i> Редактировать
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item"
+                                               href="#"
+                                               onclick="showCreateLessonModal(@Model.SelectedCourse.Course.Id)">
+                                                <i class="fas fa-plus me-1"></i> Добавить урок
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-success"
+                                               asp-controller="Teacher"
+                                               asp-action="CourseDetails"
+                                               asp-route-id="@Model.SelectedCourse.Course.Id"
+                                               asp-route-status="Approved">
+                                                <i class="fas fa-check-circle me-1"></i> Проверенные работы
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger"
+                                               href="#"
+                                               data-bs-toggle="modal"
+                                               data-bs-target="#deleteCourseModal"
+                                               data-course-id="@Model.SelectedCourse.Course.Id"
+                                               data-course-title="@Model.SelectedCourse.Course.Title">
+                                                <i class="fas fa-trash me-1"></i> Удалить курс
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -187,7 +227,7 @@
 
                             <!-- Вкладка "Домашние задания" -->
                             <div class="tab-pane fade" id="homeworks" role="tabpanel">
-                                @if (Model.SelectedCourse.PendingHomeworks.Any())
+                                @if (Model.SelectedCourse.PendingHomeworks.Any() || Model.CurrentStatus == HomeworkStatus.Approved)
                                 {
                                     <div class="homeworks-list">
                                         <table class="table">
@@ -207,10 +247,13 @@
                                                         <td>@hw.Lesson.Title</td>
                                                         <td>@hw.SubmittedAt.ToString("dd.MM.yyyy")</td>
                                                         <td>
-                                                            <a asp-action="ReviewHomework" asp-route-homeworkId="@hw.Id"
-                                                               class="btn btn-sm btn-primary">
-                                                                <i class="fas fa-check"></i> Проверить
+                                                            <a asp-controller="Teacher"
+                                                               asp-action="ReviewHomework"
+                                                               asp-route-homeworkId="@hw.Id"
+                                                               class="btn btn-sm @(hw.Status == HomeworkStatus.Approved ? "btn-info" : "btn-primary")">
+                                                                @(hw.Status == HomeworkStatus.Approved ? "Изменить оценку" : "Проверить")
                                                             </a>
+
                                                         </td>
                                                     </tr>
                                                 }
@@ -276,8 +319,58 @@
     </div>
 </div>
 
+<!-- Модальное окно удаления курса -->
+<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Подтверждение удаления</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы действительно хотите удалить курс <strong id="courseTitleToDelete"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Будут удалены все уроки и материалы курса!</p>
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-info-circle"></i> После удаления вы будете перенаправлены к списку курсов
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form id="deleteCourseForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+         // Обработка модального окна удаления
+        $('#deleteCourseModal').on('show.bs.modal', function(event) {
+            const button = $(event.relatedTarget);
+            const courseId = button.data('course-id');
+            const courseTitle = button.data('course-title');
+
+            const modal = $(this);
+            modal.find('#courseTitleToDelete').text(courseTitle);
+            modal.find('#deleteCourseForm').attr('action', '/Teacher/DeleteCourse/' + courseId);
+        });
+
+        // После удаления - обновляем страницу
+        $('#deleteCourseForm').submit(function(e) {
+            e.preventDefault();
+            $.post($(this).attr('action'), $(this).serialize(), function() {
+                $('#deleteCourseModal').modal('hide');
+                window.location.href = '@Url.Action("Course", "Home")';
+            }).fail(function() {
+                alert('Ошибка при удалении курса');
+            });
+        });
+
         // Показ модального окна создания урока
         function showCreateLessonModal(courseId) {
             $('#modal-course-id').val(courseId);

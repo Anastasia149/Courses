@@ -25,115 +25,175 @@
                 _logger = logger;
             }
 
-            // Главная страница преподавателя
-            public async Task<IActionResult> Index()
+        // Главная страница преподавателя
+        public async Task<IActionResult> Index()
+        {
+            try
             {
-                try
-                {
-                    var teacherId = _userManager.GetUserId(User);
-                    var courses = await _context.Courses
-                        .Include(c => c.Lessons)
-                        .ThenInclude(l => l.Homeworks)
-                        .Where(c => c.TeacherId == teacherId)
-                        .ToListAsync();
+                var teacherId = _userManager.GetUserId(User);
+                var courses = await _context.Courses
+                    .Include(c => c.Lessons)
+                    .ThenInclude(l => l.Homeworks)
+                    .Where(c => c.TeacherId == teacherId)
+                    .ToListAsync();
 
-                    return View(courses);
-                }
-                catch (Exception ex)
+                var model = new TeacherCoursesViewModel
                 {
-                    _logger.LogError(ex, "Ошибка при загрузке курсов преподавателя");
-                    return StatusCode(500, "Произошла ошибка при загрузке данных");
-                }
+                    Courses = courses,
+                    SelectedCourse = courses.Any() ?
+                        new CourseDetailsViewModel
+                        {
+                            Course = courses.First(),
+                            EnrolledStudentsCount = await _context.UserCourses
+                                .CountAsync(uc => uc.CourseId == courses.First().Id),
+                            PendingHomeworks = courses.First().Lessons
+                                .SelectMany(l => l.Homeworks)
+                                .Where(h => h.Status == HomeworkStatus.Pending)
+                                .ToList()
+                        }
+                        : null
+                };
+
+                return View("~/Views/Home/Course.cshtml", model); // Указываем явное имя представления
             }
-
-            // Детали курса с фильтрацией ДЗ (без пагинации)
-            public async Task<IActionResult> CourseDetails(int id, HomeworkStatus? status = HomeworkStatus.Pending)
+            catch (Exception ex)
             {
-                try
+                _logger.LogError(ex, "Ошибка при загрузке курсов преподавателя");
+                return StatusCode(500, "Произошла ошибка при загрузке данных");
+            }
+        }
+
+        // Детали курса с фильтрацией ДЗ (без пагинации)
+        public async Task<IActionResult> CourseDetails(int id, HomeworkStatus? status = HomeworkStatus.Pending)
+        {
+            try
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                var courses = await _context.Courses
+                    .Include(c => c.Lessons)
+                    .ThenInclude(l => l.Homeworks)
+                    .Where(c => c.TeacherId == teacherId)
+                    .ToListAsync();
+
+                var selectedCourse = await _context.Courses
+                    .Include(c => c.Lessons)
+                    .ThenInclude(l => l.Homeworks)
+                    .ThenInclude(h => h.Student)
+                    .FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == teacherId);
+
+                if (selectedCourse == null)
                 {
-                    var teacherId = _userManager.GetUserId(User);
+                    return NotFound();
+                }
 
-                    var course = await _context.Courses
-                        .Include(c => c.Lessons)
-                        .ThenInclude(l => l.Homeworks)
-                        .ThenInclude(h => h.Student)
-                        .FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == teacherId);
+                // Фильтрация работ по статусу
+                var homeworks = selectedCourse.Lessons
+                    .SelectMany(l => l.Homeworks)
+                    .Where(h => status == null || h.Status == status)
+                    .ToList();
 
-                    if (course == null)
+                var model = new TeacherCoursesViewModel
+                {
+                    Courses = courses,
+                    CurrentStatus = status,
+                    SelectedCourse = new CourseDetailsViewModel
                     {
-                        return NotFound();
-                    }
-
-                    var homeworks = course.Lessons
-                        .SelectMany(l => l.Homeworks)
-                        .Where(h => status == null || h.Status == status)
-                        .ToList();
-
-                    var model = new CourseDetailsViewModel
-                    {
-                        Course = course,
+                        Course = selectedCourse,
                         PendingHomeworks = homeworks,
                         EnrolledStudentsCount = await _context.UserCourses
-                            .CountAsync(uc => uc.CourseId == id)
-                    };
-
-                    ViewBag.CurrentStatus = status;
-                    return View(model);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Ошибка при загрузке курса {id}");
-                    return StatusCode(500, "Произошла ошибка при загрузке курса");
-                }
-            }
-
-            // Проверка ДЗ (GET)
-            public async Task<IActionResult> ReviewHomework(int homeworkId, string returnUrl = null)
-            {
-                try
-                {
-                    var homework = await _context.Homeworks
-                        .Include(h => h.Student)
-                        .Include(h => h.Lesson)
-                        .ThenInclude(l => l.Course)
-                        .FirstOrDefaultAsync(h => h.Id == homeworkId);
-
-                    if (homework == null || homework.Lesson.Course.TeacherId != _userManager.GetUserId(User))
-                    {
-                        return NotFound();
+                    .CountAsync(uc => uc.CourseId == id),
+                        CurrentStatus = status // Сохраняем текущий статус фильтрации
                     }
+                };
 
-                    ViewBag.ReturnUrl = returnUrl ?? Url.Action(nameof(CourseDetails), new { id = homework.Lesson.CourseId });
-
-                    return View(new ReviewHomeworkViewModel
-                    {
-                        Homework = homework,
-                        Feedback = homework.Feedback,
-                        Status = homework.Status
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Ошибка при загрузке ДЗ {homeworkId}");
-                    return StatusCode(500, "Произошла ошибка при загрузке работы");
-                }
+                return View("~/Views/Home/Course.cshtml", model);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при загрузке курса {id}");
+                return StatusCode(500, "Произошла ошибка при загрузке курса");
+            }
+        }
 
-            [HttpPost]
+        // Проверка ДЗ (GET)
+        public async Task<IActionResult> ReviewHomework(int homeworkId, string returnUrl = null)
+        {
+            try
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                // 🔍 Грузим ДЗ ТОЛЬКО если оно относится к курсу текущего преподавателя
+                var homework = await _context.Homeworks
+                    .Include(h => h.Student)
+                    .Include(h => h.Lesson)
+                        .ThenInclude(l => l.Course)
+                    .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+
+                if (homework == null)
+                {
+                    return NotFound("Домашнее задание не найдено или у вас нет доступа.");
+                }
+
+                // ✅ К этому моменту Lesson и Course гарантированно загружены
+
+                ViewBag.ReturnUrl = returnUrl ?? Url.Action(nameof(CourseDetails), new
+                {
+                    id = homework.Lesson.Course.Id,
+                    status = homework.Status == HomeworkStatus.Approved ? "Approved" : "Pending"
+                });
+
+                return View(new ReviewHomeworkViewModel
+                {
+                    Homework = homework,
+                    Feedback = homework.Feedback,
+                    Status = homework.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при загрузке ДЗ {homeworkId}");
+                return StatusCode(500, "Произошла ошибка при загрузке работы");
+            }
+        }
+
+
+        [HttpPost]
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> ReviewHomework(int homeworkId, ReviewHomeworkViewModel model, string returnUrl = null)
             {
                 if (!ModelState.IsValid)
                 {
+                var homework = await _context.Homeworks
+                   .Include(h => h.Lesson)
+                       .ThenInclude(l => l.Course)
+                   .Include(h => h.Student)
+                   .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+                    if (homework == null)
+                        return NotFound();
+
+                    model.Homework = homework;
                     ViewBag.ReturnUrl = returnUrl;
-                    return View(model);
+
+
+                    _logger.LogWarning("ModelState INVALID:");
+                    foreach (var kvp in ModelState)
+                    foreach (var err in kvp.Value.Errors)
+                        _logger.LogWarning($" - {kvp.Key}: {err.ErrorMessage}");
+
+                return View(model);
                 }
 
-                try
+            try
                 {
                     var homework = await _context.Homeworks
                         .Include(h => h.Lesson)
+                            .ThenInclude(l => l.Course)
+                        .Include(h => h.Student)
                         .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
 
                     if (homework == null || homework.Lesson.Course.TeacherId != _userManager.GetUserId(User))
                     {
@@ -142,10 +202,17 @@
 
                     homework.Feedback = model.Feedback;
                     homework.Status = model.Status;
+                    _logger.LogInformation("Пытаюсь сохранить: Feedback={Feedback}, Status={Status}", model.Feedback, model.Status);
+                    _logger.LogInformation("Сохранено");
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = "Работа успешно проверена!";
-                    return Redirect(returnUrl ?? Url.Action(nameof(CourseDetails), new { id = homework.Lesson.CourseId }));
+                    if (!string.IsNullOrEmpty(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+                    return RedirectToAction("CourseDetails", new { id = homework.Lesson.Course.Id });
+
                 }
                 catch (Exception ex)
                 {
@@ -288,6 +355,82 @@
                     ModelState.AddModelError("", "Произошла ошибка при создании курса");
                     return View(model);
                 }
-        }
+            }
+
+            [HttpGet]
+            public async Task<IActionResult> EditCourse(int id)
+            {
+                var course = await _context.Courses.FindAsync(id);
+                if (course == null || course.TeacherId != _userManager.GetUserId(User))
+                {
+                    return NotFound();
+                }
+
+                var model = new EditCourseViewModel
+                {
+                    Id = course.Id,
+                    Title = course.Title,
+                    Description = course.Description,
+                    Category = course.Category,
+                    DifficultyLevel = course.DifficultyLevel
+                };
+
+                return View(model);
+            }
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> EditCourse(EditCourseViewModel model)
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(model);
+                }
+
+                var course = await _context.Courses.FindAsync(model.Id);
+                if (course == null || course.TeacherId != _userManager.GetUserId(User))
+                {
+                    return NotFound();
+                }
+
+                course.Title = model.Title;
+                course.Description = model.Description;
+                course.Category = model.Category;
+                course.DifficultyLevel = model.DifficultyLevel;
+
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Курс успешно обновлен!";
+                return RedirectToAction(nameof(CourseDetails), new { id = course.Id });
+            }
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> DeleteCourse(int id)
+            {
+                var course = await _context.Courses
+                    .Include(c => c.Lessons)
+                    .ThenInclude(l => l.Homeworks)
+                    .FirstOrDefaultAsync(c => c.Id == id);
+
+                if (course == null || course.TeacherId != _userManager.GetUserId(User))
+                {
+                    return NotFound();
+                }
+
+                try
+                {
+                    _context.Courses.Remove(course);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = $"Курс «{course.Title}» успешно удалён";
+                    return Json(new { success = true });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при удалении курса {id}");
+                    return Json(new { success = false, error = "Ошибка при удалении курса" });
+                }
+            }
         }
     }

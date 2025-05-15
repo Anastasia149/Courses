@@ -1,0 +1,221 @@
+﻿@using Courses.ViewModels
+@model ReviewHomeworkViewModel
+@{
+    // Безопасное получение заголовка
+    var pageTitle = "Проверка ДЗ";
+    if (Model?.Homework?.Lesson != null)
+    {
+        pageTitle += $": {Model.Homework.Lesson}";
+    }
+    ViewData["Title"] = pageTitle;
+
+    // Безопасные проверки
+    var isApproved = Model?.Homework?.Status == HomeworkStatus.Approved;
+    var lessonTitle = Model?.Homework?.Lesson?.Title ?? "Урок не найден";
+    var courseId = Model?.Homework?.Lesson?.Course?.Id ?? 0;
+    var courseTitle = Model?.Homework?.Lesson?.Course?.Title ?? "Курс не найден";
+    var studentName = Model?.Homework?.Student?.FullName ?? "Студент не найден";
+    var homeworkExists = Model?.Homework != null;
+    var lessonExists = homeworkExists && Model.Homework.Lesson != null;
+    var courseExists = lessonExists && Model.Homework.Lesson.Course != null;
+}
+
+@if (!homeworkExists)
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> Домашнее задание не найдено.
+        <a asp-controller="Home" asp-action="Course" asp-route-id="@Context.Request.Query["courseId"]"
+           class="alert-link">Вернуться к курсу</a>
+    </div>
+    return;
+}
+
+@if (!lessonExists)
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-circle"></i> Урок не найден в базе данных.
+        <p class="mt-2">ID задания: @Model.Homework.Id</p>
+        <p>ID урока: @(Model.Homework.Lesson?.Id.ToString() ?? "Урок не загружен")</p>
+        <a asp-controller="Home" asp-action="Course" asp-route-id="@Context.Request.Query["courseId"]"
+           class="btn btn-primary mt-3">
+            <i class="fas fa-arrow-left"></i> Вернуться к курсу
+        </a>
+    </div>
+    return;
+}
+
+<div class="container homework-review-container mt-4">
+   
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a asp-controller="Teacher" asp-action="Index">Мои курсы</a>
+            </li>
+            @if (courseId > 0)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@courseId">
+                        @courseTitle
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-controller="Teacher" asp-action="CourseDetails"
+                       asp-route-id="@courseId"
+                       asp-route-status="@(isApproved ? "Approved" : "Pending")">
+                        @(isApproved ? "Проверенные работы" : "Работы на проверке")
+                    </a>
+                </li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">Просмотр работы</li>
+        </ol>
+    </nav>
+
+    @if (Model.Homework == null || Model.Homework.Lesson == null)
+    {
+        <div class="alert alert-danger">
+            Информация о домашнем задании не найдена
+        </div>
+    }
+
+    <!-- Основной контент -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>@Model.Homework.Lesson.Title
+                </h3>
+                <span class="badge bg-@GetStatusBadgeClass(Model.Homework.Status) fs-6">
+                    @GetStatusDisplayName(Model.Homework.Status)
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Информация о студенте -->
+            <div class="student-info-section mb-4 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(Model.Homework.Student.AvatarPath))
+                            {
+                                <img src="@Model.Homework.Student.AvatarPath"
+                                     class="rounded-circle me-3"
+                                     width="60" height="60"
+                                     alt="Аватар студента">
+                            }
+                            <div>
+                                <h5 class="mb-1">@Model.Homework.Student.FullName</h5>
+                                <small class="text-muted">@Model.Homework.Student.Email</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="mt-2 mt-md-0">
+                            <div class="text-muted small">Дата сдачи:</div>
+                            <div class="fw-bold">@Model.Homework.SubmittedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ответ студента -->
+            <div class="answer-section mb-4">
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-file-alt me-2"></i>Ответ студента
+                </h5>
+                <div class="answer-content p-3 bg-light rounded">
+                    @if (!string.IsNullOrEmpty(Model.Homework.Answer))
+                    {
+                        @Html.Raw(Model.Homework.Answer)
+                    }
+                    else
+                    {
+                        <div class="text-muted">Студент не предоставил ответ</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Форма проверки -->
+            <form asp-controller="Teacher" asp-action="ReviewHomework" asp-route-homeworkId="@Model.Homework.Id" method="post" class="review-form">
+                <input type="hidden" name="homeworkId" value="@Model.Homework.Id" />
+                <input type="hidden" name="returnUrl" value="@Url.Action("CourseDetails", new { id = Model.Homework.Lesson.Course.Id, status = isApproved ? "Approved" : "Pending" })" />
+
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-check-circle me-2"></i>Оценка работы
+                </h5>
+
+                <!-- Отзыв преподавателя -->
+                <div class="mb-4">
+                    <label asp-for="Feedback" class="form-label">Ваш отзыв</label>
+                    <textarea asp-for="Feedback" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Feedback" class="text-danger small"></span>
+                </div>
+
+                <!-- Статус работы -->
+                <div class="mb-4">
+                    <label asp-for="Status" class="form-label">Статус работы</label>
+                    @if (isApproved)
+                    {
+                        <select asp-for="Status" class="form-select">
+                            <option value="@HomeworkStatus.Approved">Принято</option>
+                            <option value="@HomeworkStatus.Rejected">Требует доработки</option>
+                        </select>
+                    }
+                    else
+                    {
+                        <select asp-for="Status" class="form-select">
+                            <option value="@HomeworkStatus.Approved">Принято</option>
+                            <option value="@HomeworkStatus.Rejected">Требует доработки</option>
+                        </select>
+                    }
+                </div>
+
+                <div class="d-flex justify-content-between border-top pt-3">
+                    <a asp-controller="Teacher"
+                        asp-action="CourseDetails" 
+                       asp-route-id="@Model.Homework.Lesson.Course.Id"
+                       asp-route-status="@(isApproved ? "Approved" : "Pending")"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </a>
+                    
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save me-2"></i>
+                        @(isApproved ? "Изменить оценку" : "Сохранить оценку")
+                    </button>
+
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+
+@functions {
+    string GetStatusBadgeClass(HomeworkStatus status)
+    {
+        return status switch
+        {
+            HomeworkStatus.Approved => "success",
+            HomeworkStatus.Rejected => "danger",
+            _ => "warning",
+        };
+    }
+
+    string GetStatusDisplayName(HomeworkStatus status)
+    {
+        return status switch
+        {
+            HomeworkStatus.Approved => "Принято",
+            HomeworkStatus.Rejected => "Отклонено",
+            HomeworkStatus.Pending => "На проверке",
+            _ => status.ToString(),
+        };
+    }
+}
