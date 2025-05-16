@@ -288,45 +288,6 @@
     </div>
 </div>
 
-<!-- Модальное окно создания урока -->
-<div class="modal fade" id="createLessonModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Добавить урок</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="createLessonForm" asp-controller="Teacher" asp-action="AddLesson" method="post" enctype="multipart/form-data">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="CourseId" id="modal-course-id" />
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Название урока</label>
-                        <input type="text" class="form-control" name="Title" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Порядковый номер</label>
-                        <input type="number" class="form-control" name="Order" min="1" value="1" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Содержание</label>
-                        <textarea class="form-control" name="Content" rows="5"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Медиафайлы</label>
-                        <input type="file" class="form-control" name="Attachments" multiple accept=".jpg,.jpeg,.png,.pdf,.mp4,.ppt,.pptx" />
-                        <small class="text-muted">Можно выбрать несколько файлов: изображения, видео, презентации</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Создать</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Модальное окно удаления курса -->
 <div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
