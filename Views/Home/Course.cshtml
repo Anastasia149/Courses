@@ -305,7 +305,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <form id="deleteCourseForm" method="post">
+                <form id="deleteCourseForm" asp-controller="Teacher" asp-action="DeleteCourse" method="post">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash me-1"></i> Удалить

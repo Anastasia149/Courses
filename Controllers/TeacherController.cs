@@ -545,6 +545,50 @@
                     }).ToList();
             }
 
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> DeleteCourse(int id)
+            {
+                var teacherId = _userManager.GetUserId(User);
 
-        }
+                var course = await _context.Courses
+                    .Include(c => c.Lessons)
+                        .ThenInclude(l => l.Homeworks)
+                    .FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == teacherId);
+
+                if (course == null)
+                {
+                    _logger.LogWarning($"Курс с id={id} не найден или доступ запрещён");
+                    return NotFound();
+                }
+
+                try
+                {
+                    // 🧹 Удаление файлов каждого урока (если хранишь файлы в /uploads/lessons/{lessonId})
+                    foreach (var lesson in course.Lessons)
+                    {
+                        var lessonDir = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
+                        if (Directory.Exists(lessonDir))
+                        {
+                            Directory.Delete(lessonDir, true); // рекурсивно
+                        }
+                    }
+
+                    _context.Courses.Remove(course);
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation($"Курс {course.Title} успешно удалён (id={id})");
+                    TempData["SuccessMessage"] = $"Курс «{course.Title}» был удалён.";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при удалении курса с id={id}");
+                    TempData["ErrorMessage"] = "Ошибка при удалении курса";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
+
     }
+}
