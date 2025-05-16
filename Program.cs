@@ -29,6 +29,8 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 
 var app = builder.Build();
 
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
 await SeedService.SeedDatabase(app.Services);
 
 // Configure the HTTP request pipeline.

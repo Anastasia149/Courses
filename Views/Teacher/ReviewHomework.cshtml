@@ -11,37 +11,8 @@
 
     // Безопасные проверки
     var isApproved = Model?.Homework?.Status == HomeworkStatus.Approved;
-    var lessonTitle = Model?.Homework?.Lesson?.Title ?? "Урок не найден";
     var courseId = Model?.Homework?.Lesson?.Course?.Id ?? 0;
     var courseTitle = Model?.Homework?.Lesson?.Course?.Title ?? "Курс не найден";
-    var studentName = Model?.Homework?.Student?.FullName ?? "Студент не найден";
-    var homeworkExists = Model?.Homework != null;
-    var lessonExists = homeworkExists && Model.Homework.Lesson != null;
-    var courseExists = lessonExists && Model.Homework.Lesson.Course != null;
-}
-
-@if (!homeworkExists)
-{
-    <div class="alert alert-danger">
-        <i class="fas fa-exclamation-triangle"></i> Домашнее задание не найдено.
-        <a asp-controller="Home" asp-action="Course" asp-route-id="@Context.Request.Query["courseId"]"
-           class="alert-link">Вернуться к курсу</a>
-    </div>
-    return;
-}
-
-@if (!lessonExists)
-{
-    <div class="alert alert-warning">
-        <i class="fas fa-exclamation-circle"></i> Урок не найден в базе данных.
-        <p class="mt-2">ID задания: @Model.Homework.Id</p>
-        <p>ID урока: @(Model.Homework.Lesson?.Id.ToString() ?? "Урок не загружен")</p>
-        <a asp-controller="Home" asp-action="Course" asp-route-id="@Context.Request.Query["courseId"]"
-           class="btn btn-primary mt-3">
-            <i class="fas fa-arrow-left"></i> Вернуться к курсу
-        </a>
-    </div>
-    return;
 }
 
 <div class="container homework-review-container mt-4">

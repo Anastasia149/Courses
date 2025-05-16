@@ -14,16 +14,19 @@
             private readonly AppDbContext _context;
             private readonly UserManager<User> _userManager;
             private readonly ILogger<TeacherController> _logger;
+            private readonly IWebHostEnvironment _environment;
 
-            public TeacherController(
+        public TeacherController(
                 AppDbContext context,
                 UserManager<User> userManager,
-                ILogger<TeacherController> logger)
+                ILogger<TeacherController> logger,
+                IWebHostEnvironment environment)
             {
                 _context = context;
                 _userManager = userManager;
                 _logger = logger;
-            }
+                _environment= environment;
+        }
 
         // Главная страница преподавателя
         public async Task<IActionResult> Index()
@@ -159,7 +162,7 @@
         }
 
 
-        [HttpPost]
+            [HttpPost]
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> ReviewHomework(int homeworkId, ReviewHomeworkViewModel model, string returnUrl = null)
             {
@@ -223,58 +226,59 @@
                 }
             }
 
-            // Добавление урока (GET)
+            [HttpGet]
             public IActionResult AddLesson(int courseId)
             {
-                ViewBag.CourseId = courseId;
-                return View(new LessonViewModel());
+                return View(new AddLessonViewModel { CourseId = courseId });
             }
 
-            // Добавление урока (POST)
             [HttpPost]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> AddLesson(int courseId, LessonViewModel model)
+            public async Task<IActionResult> AddLesson(AddLessonViewModel model)
             {
                 if (!ModelState.IsValid)
-                {
-                    ViewBag.CourseId = courseId;
                     return View(model);
-                }
 
-                try
+                var course = await _context.Courses.FindAsync(model.CourseId);
+                if (course == null || course.TeacherId != _userManager.GetUserId(User))
+                    return NotFound();
+
+                var lesson = new Lesson
                 {
-                    var course = await _context.Courses.FindAsync(courseId);
-                    if (course == null || course.TeacherId != _userManager.GetUserId(User))
+                    Title = model.Title,
+                    Order = model.Order,
+                    Content = model.Content,
+                    CourseId = model.CourseId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Lessons.Add(lesson);
+                await _context.SaveChangesAsync();
+
+                // 📂 Сохраняем файлы
+                var uploadPath = Path.Combine("wwwroot", "uploads", "lessons", lesson.Id.ToString());
+                Directory.CreateDirectory(uploadPath);
+
+                if (model.Attachments != null)
+                {
+                    foreach (var file in model.Attachments)
                     {
-                        return NotFound();
+                        if (file.Length > 0)
+                        {
+                            var filePath = Path.Combine(uploadPath, file.FileName);
+                            using var stream = new FileStream(filePath, FileMode.Create);
+                            await file.CopyToAsync(stream);
+                        }
                     }
-
-                    var lesson = new Lesson
-                    {
-                        Title = model.Title,
-                        Content = model.Content,
-                        Order = model.Order,
-                        CourseId = courseId,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    _context.Lessons.Add(lesson);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Урок успешно добавлен!";
-                    return RedirectToAction(nameof(CourseDetails), new { id = courseId });
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Ошибка при добавлении урока в курс {courseId}");
-                    ModelState.AddModelError("", "Произошла ошибка при добавлении урока");
-                    ViewBag.CourseId = courseId;
-                    return View(model);
-                }
+
+                TempData["SuccessMessage"] = "Урок успешно добавлен!";
+                return RedirectToAction("CourseDetails", new { id = model.CourseId });
             }
 
-            // Список студентов курса
-            public async Task<IActionResult> CourseStudents(int courseId)
+
+        // Список студентов курса
+        public async Task<IActionResult> CourseStudents(int courseId)
             {
                 try
                 {
@@ -406,31 +410,141 @@
 
             [HttpPost]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> DeleteCourse(int id)
+            public async Task<IActionResult> DeleteLesson(int id)
             {
-                var course = await _context.Courses
-                    .Include(c => c.Lessons)
-                    .ThenInclude(l => l.Homeworks)
-                    .FirstOrDefaultAsync(c => c.Id == id);
-
-                if (course == null || course.TeacherId != _userManager.GetUserId(User))
-                {
-                    return NotFound();
-                }
-
                 try
                 {
-                    _context.Courses.Remove(course);
+                    var lesson = await _context.Lessons
+                        .Include(l => l.Course)
+                        .FirstOrDefaultAsync(l => l.Id == id);
+
+                    if (lesson == null || lesson.Course.TeacherId != _userManager.GetUserId(User))
+                    {
+                        return NotFound();
+                    }
+
+                    // Если есть связанные медиафайлы — удалить их из файловой системы здесь
+                    // (если реализовано хранение путей в БД)
+
+                    _context.Lessons.Remove(lesson);
                     await _context.SaveChangesAsync();
 
-                    TempData["SuccessMessage"] = $"Курс «{course.Title}» успешно удалён";
-                    return Json(new { success = true });
+                    TempData["SuccessMessage"] = "Урок успешно удалён!";
+                    return RedirectToAction(nameof(CourseDetails), new { id = lesson.CourseId });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Ошибка при удалении курса {id}");
-                    return Json(new { success = false, error = "Ошибка при удалении курса" });
+                    _logger.LogError(ex, $"Ошибка при удалении урока с id={id}");
+                    TempData["ErrorMessage"] = "Произошла ошибка при удалении урока";
+                    return RedirectToAction(nameof(Index));
                 }
             }
+
+
+            [HttpGet]
+            public async Task<IActionResult> EditLesson(int id)
+            {
+                var lesson = await _context.Lessons
+                    .Include(l => l.Course)
+                    .FirstOrDefaultAsync(l => l.Id == id);
+
+                if (lesson == null || lesson.Course.TeacherId != _userManager.GetUserId(User))
+                    return NotFound();
+
+                var model = new EditLessonViewModel
+                {
+                    Id = lesson.Id,
+                    Title = lesson.Title,
+                    Order = lesson.Order,
+                    Content = lesson.Content,
+                    CourseId = lesson.CourseId,
+                    ExistingFiles = GetLessonFiles(lesson.Id)
+                };
+
+                return View(model);
+            }
+
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> EditLesson(EditLessonViewModel model)
+            {
+                if (!ModelState.IsValid)
+                {
+                    model.ExistingFiles = GetLessonFiles(model.Id);
+                    return View(model);
+                }
+
+                var lesson = await _context.Lessons
+                    .Include(l => l.Course)
+                    .FirstOrDefaultAsync(l => l.Id == model.Id);
+
+                if (lesson == null || lesson.Course.TeacherId != _userManager.GetUserId(User))
+                    return NotFound();
+
+                lesson.Title = model.Title;
+                lesson.Order = model.Order;
+                lesson.Content = model.Content;
+
+                // Загрузка файлов
+                if (model.Attachments != null && model.Attachments.Any())
+                {
+                    var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
+
+                    if (!Directory.Exists(uploadPath))
+                        Directory.CreateDirectory(uploadPath);
+
+                    foreach (var file in model.Attachments)
+                    {
+                        if (file.Length > 0)
+                        {
+                            var filePath = Path.Combine(uploadPath, Path.GetFileName(file.FileName));
+                            using var stream = new FileStream(filePath, FileMode.Create);
+                            await file.CopyToAsync(stream);
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Урок успешно обновлён!";
+                return RedirectToAction(nameof(CourseDetails), new { id = lesson.CourseId });
+            }
+
+            [HttpGet]
+            public IActionResult DeleteLessonFile(int lessonId, string fileName)
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                var lesson = _context.Lessons
+                    .Include(l => l.Course)
+                    .FirstOrDefault(l => l.Id == lessonId && l.Course.TeacherId == teacherId);
+
+                if (lesson == null)
+                    return NotFound();
+
+                var path = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lessonId.ToString(), fileName);
+
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+
+                return RedirectToAction(nameof(EditLesson), new { id = lessonId });
+            }
+
+            private List<LessonFileViewModel> GetLessonFiles(int lessonId)
+            {
+                var path = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lessonId.ToString());
+                if (!Directory.Exists(path))
+                    return new List<LessonFileViewModel>();
+
+                return Directory.GetFiles(path)
+                    .Select(f => new LessonFileViewModel
+                    {
+                        FileName = Path.GetFileName(f),
+                        FilePath = "/uploads/lessons/" + lessonId + "/" + Path.GetFileName(f)
+                    }).ToList();
+            }
+
+
         }
     }

@@ -1,0 +1,84 @@
+﻿@model Courses.ViewModels.EditLessonViewModel
+
+@{
+    ViewData["Title"] = "Редактирование урока";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2><i class="fas fa-edit me-2"></i>Редактирование урока</h2>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="EditLesson"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CourseId" />
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label">Название урока</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Order" class="form-label">Порядковый номер</label>
+                    <input asp-for="Order" class="form-control" type="number" min="1" />
+                    <span asp-validation-for="Order" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Content" class="form-label">Содержание</label>
+                    <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                    <span asp-validation-for="Content" class="text-danger"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Прикрепить дополнительные материалы</label>
+                    <input type="file" name="Attachments" multiple class="form-control" />
+                    <small class="form-text text-muted">Вы можете загрузить видео, изображения, PDF и т.д.</small>
+                </div>
+
+                @if (Model.ExistingFiles != null && Model.ExistingFiles.Any())
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Загруженные файлы:</label>
+                        <ul class="list-group">
+                            @foreach (var file in Model.ExistingFiles)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>@file.FileName</span>
+                                    <a class="btn btn-sm btn-outline-danger"
+                                       asp-action="DeleteLessonFile"
+                                       asp-route-lessonId="@Model.Id"
+                                       asp-route-fileName="@file.FileName"
+                                       onclick="return confirm('Удалить файл?')">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-between pt-3">
+                    <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Сохранить изменения
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

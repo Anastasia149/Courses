@@ -1,0 +1,57 @@
+﻿@model Courses.ViewModels.AddLessonViewModel
+@{
+    ViewData["Title"] = "Добавить урок";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h2><i class="fas fa-plus me-2"></i>Добавить урок</h2>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="AddLesson" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="CourseId" />
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label">Название</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Order" class="form-label">Порядок</label>
+                    <input asp-for="Order" class="form-control" type="number" min="1" />
+                    <span asp-validation-for="Order" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Content" class="form-label">Содержание</label>
+                    <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Дополнительные материалы</label>
+                    <input type="file" name="Attachments" class="form-control" multiple />
+                    <small class="form-text text-muted">Загрузите изображения, видео, PDF и т.д.</small>
+                </div>
+
+                <div class="d-flex justify-content-between pt-3">
+                    <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Создать урок
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

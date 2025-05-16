@@ -76,10 +76,12 @@
                                         </li>
                                         <li>
                                             <a class="dropdown-item"
-                                               href="#"
-                                               onclick="showCreateLessonModal(@Model.SelectedCourse.Course.Id)">
+                                               asp-controller="Teacher"
+                                               asp-action="AddLesson"
+                                               asp-route-courseId="@Model.SelectedCourse.Course.Id">
                                                 <i class="fas fa-plus me-1"></i> Добавить урок
                                             </a>
+
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
@@ -200,11 +202,11 @@
                                                         <i class="fas fa-file-alt"></i> @lesson.Homeworks.Count работ
                                                     </span>
                                                     <div class="lesson-actions">
-                                                        <a asp-action="EditLesson" asp-route-id="@lesson.Id"
+                                                        <a asp-controller="Teacher" asp-action="EditLesson" asp-route-id="@lesson.Id"
                                                            class="btn btn-sm btn-outline-secondary me-2">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
-                                                        <form asp-action="DeleteLesson" method="post"
+                                                        <form asp-controller="Teacher" asp-action="DeleteLesson" method="post"
                                                               onsubmit="return confirm('Удалить этот урок?')">
                                                             <input type="hidden" name="id" value="@lesson.Id" />
                                                             <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -294,8 +296,9 @@
                 <h5 class="modal-title">Добавить урок</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="createLessonForm" asp-action="AddLesson" method="post">
-                <input type="hidden" name="courseId" id="modal-course-id" />
+            <form id="createLessonForm" asp-controller="Teacher" asp-action="AddLesson" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="CourseId" id="modal-course-id" />
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Название урока</label>
@@ -308,6 +311,11 @@
                     <div class="mb-3">
                         <label class="form-label">Содержание</label>
                         <textarea class="form-control" name="Content" rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Медиафайлы</label>
+                        <input type="file" class="form-control" name="Attachments" multiple accept=".jpg,.jpeg,.png,.pdf,.mp4,.ppt,.pptx" />
+                        <small class="text-muted">Можно выбрать несколько файлов: изображения, видео, презентации</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -372,17 +380,42 @@
         });
 
         // Показ модального окна создания урока
-        function showCreateLessonModal(courseId) {
+            function showCreateLessonModal(courseId) {
             $('#modal-course-id').val(courseId);
             $('#createLessonModal').modal('show');
         }
 
         // Обработка формы создания урока
-        $('#createLessonForm').submit(function(e) {
+        $('#createLessonForm').submit(function (e) {
             e.preventDefault();
-            $.post($(this).attr('action'), $(this).serialize(), function() {
-                $('#createLessonModal').modal('hide');
-                window.location.reload();
+
+            const $form = $(this);
+            const actionUrl = $form.attr('action');
+
+            $.ajax({
+                url: actionUrl,
+                method: 'POST',
+                data: $form.serialize(),
+                dataType: 'json', // ОЖИДАЕМ JSON!
+                success: function (response) {
+                    if (response.success) {
+                        $('#createLessonModal').modal('hide');
+                        window.location.reload();
+                    } else {
+                        alert('Ошибка: ' + (response.message || 'Неверные данные'));
+                    }
+                },
+                error: function (xhr) {
+                    let errorText = 'Ошибка при отправке';
+                    try {
+                        const responseJson = JSON.parse(xhr.responseText);
+                        if (responseJson && responseJson.errors) {
+                            errorText = responseJson.errors.join('\n');
+                        }
+                    } catch { /* noop */ }
+
+                    alert(errorText);
+                }
             });
         });
 
