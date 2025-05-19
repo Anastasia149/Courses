@@ -1,0 +1,97 @@
+@using Courses.ViewModels
+@using Courses.Models
+@model StudentCourseDetailsViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Course">Мои курсы</a></li>
+            <li class="breadcrumb-item active">@Model.Title</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <h1 class="mb-3">@Model.Title</h1>
+            <p class="lead">@Model.Description</p>
+            <p class="text-muted">
+                <i class="fas fa-user me-2"></i>Преподаватель: @Model.TeacherName
+            </p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h2>Уроки</h2>
+            @if (Model.Lessons.Any())
+            {
+                <div class="list-group">
+                    @foreach (var lesson in Model.Lessons)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">@lesson.Order. @lesson.Title</h5>
+                                    <div class="mb-1">@Html.Raw(lesson.Description)</div>
+                                    @if (lesson.Files != null && lesson.Files.Any())
+                                    {
+                                        <div class="mt-2">
+                                            <strong>Материалы:</strong>
+                                            <ul>
+                                            @foreach (var file in lesson.Files)
+                                            {
+                                                <li>
+                                                    @if (file.FileName.ToLower().EndsWith(".jpg") || file.FileName.ToLower().EndsWith(".jpeg") || file.FileName.ToLower().EndsWith(".png") || file.FileName.ToLower().EndsWith(".gif"))
+                                                    {
+                                                        <img src="@file.FilePath" alt="@file.FileName" style="max-width:200px;max-height:200px;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <a href="@file.FilePath" target="_blank">@file.FileName</a>
+                                                    }
+                                                </li>
+                                            }
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    @if (lesson.HasHomework)
+                                    {
+                                        <span class="badge @(lesson.HomeworkStatus switch {
+                                            HomeworkStatus.Approved => "bg-success",
+                                            HomeworkStatus.Pending => "bg-warning",
+                                            HomeworkStatus.Rejected => "bg-danger",
+                                            _ => "bg-secondary"
+                                        })">
+                                            @(lesson.HomeworkStatus switch {
+                                                HomeworkStatus.Approved => "Принято",
+                                                HomeworkStatus.Pending => "На проверке",
+                                                HomeworkStatus.Rejected => "Отклонено",
+                                                _ => "Не сдано"
+                                            })
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Не сдано</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    В этом курсе пока нет уроков
+                </div>
+            }
+        </div>
+    </div>
+</div> 

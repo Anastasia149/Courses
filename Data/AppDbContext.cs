@@ -15,6 +15,7 @@ namespace Courses.Data
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Homework> Homeworks { get; set; }
         public DbSet<UserCourse> UserCourses { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -45,6 +46,11 @@ namespace Courses.Data
                 .Property(h => h.Status)
                 .HasConversion<string>(); // Для хранения enum как строки в БД
 
+            // Настройка для Notification
+            builder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId);
         }
     }
 }

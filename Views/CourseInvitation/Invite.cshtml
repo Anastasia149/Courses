@@ -1,0 +1,38 @@
+@model Courses.ViewModels.CourseInvitationViewModel
+
+@{
+    ViewData["Title"] = "Пригласить студента";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Пригласить студента на курс "@Model.CourseName"</h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Invite" method="post">
+                        <input type="hidden" asp-for="CourseId" />
+                        <input type="hidden" asp-for="CourseName" />
+                        
+                        <div class="form-group mb-3">
+                            <label asp-for="StudentEmail" class="form-label">Email студента</label>
+                            <input asp-for="StudentEmail" class="form-control" />
+                            <span asp-validation-for="StudentEmail" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Отправить приглашение</button>
+                            <a asp-controller="Teacher" asp-action="EditLesson" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">Отмена</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 

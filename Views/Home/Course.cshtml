@@ -81,7 +81,14 @@
                                                asp-route-courseId="@Model.SelectedCourse.Course.Id">
                                                 <i class="fas fa-plus me-1"></i> Добавить урок
                                             </a>
-
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item"
+                                               asp-controller="CourseInvitation"
+                                               asp-action="Invite"
+                                               asp-route-courseId="@Model.SelectedCourse.Course.Id">
+                                                <i class="fas fa-user-plus me-1"></i> Пригласить студента
+                                            </a>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>

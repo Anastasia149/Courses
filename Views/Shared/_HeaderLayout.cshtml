@@ -61,9 +61,23 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Home" asp-action="Student">Кабинет</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Student" asp-action="Course">Мои курсы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link position-relative" asp-controller="Notification" asp-action="Index">
+                                    <i class="fas fa-bell"></i>
+                                    @if (ViewBag.UnreadNotificationsCount > 0)
+                                    {
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            @ViewBag.UnreadNotificationsCount
+                                        </span>
+                                    }
+                                </a>
+                            </li>
                         }
+                        <partial name="_LoginPartial" />
                     </ul>
-                    <partial name="_LoginPartial" />
                 </div>
             </nav>
         </div>

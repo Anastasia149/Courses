@@ -1,0 +1,57 @@
+@model IEnumerable<Courses.Models.Notification>
+
+<div class="dropdown">
+    <button class="btn btn-link nav-link position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell"></i>
+        @if (ViewBag.UnreadCount > 0)
+        {
+            <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                @ViewBag.UnreadCount
+            </span>
+        }
+    </button>
+    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 300px;">
+        <h6 class="dropdown-header">Уведомления</h6>
+        @if (!Model.Any())
+        {
+            <div class="dropdown-item text-muted">Нет уведомлений</div>
+        }
+        else
+        {
+            foreach (var notification in Model.Take(5))
+            {
+                <a class="dropdown-item @(!notification.IsRead ? "bg-light" : "")" href="@GetNotificationLink(notification)">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="small text-muted">@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                            <div>@notification.Message</div>
+                        </div>
+                        @if (!notification.IsRead)
+                        {
+                            <div class="ms-2">
+                                <span class="badge bg-primary rounded-pill">Новое</span>
+                            </div>
+                        }
+                    </div>
+                </a>
+            }
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item text-center" asp-controller="Notification" asp-action="Index">
+                Показать все уведомления
+            </a>
+        }
+    </div>
+</div>
+
+@functions {
+    private string GetNotificationLink(Courses.Models.Notification notification)
+    {
+        return notification.Type switch
+        {
+            Courses.Models.NotificationType.CourseInvitation => Url.Action("Course", "Student"),
+            Courses.Models.NotificationType.HomeworkReviewed => Url.Action("CourseDetails", "Student", new { id = notification.CourseId }),
+            Courses.Models.NotificationType.NewLesson => Url.Action("CourseDetails", "Student", new { id = notification.CourseId }),
+            _ => "#"
+        };
+    }
+} 

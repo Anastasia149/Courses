@@ -22,11 +22,4 @@ namespace Courses.ViewModels
 
         public List<LessonFileViewModel> ExistingFiles { get; set; } = new();
     }
-
-    public class LessonFileViewModel
-    {
-        public string FileName { get; set; }
-        public string FilePath { get; set; }
-    }
-
 }

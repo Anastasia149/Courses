@@ -1,0 +1,61 @@
+@model IEnumerable<Courses.Models.Notification>
+
+@{
+    ViewData["Title"] = "Уведомления";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Уведомления</h1>
+
+    @if (Model.Any())
+    {
+        <div class="list-group">
+            @foreach (var notification in Model)
+            {
+                <div class="list-group-item @(!notification.IsRead ? "list-group-item-primary" : "")">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">@notification.Message</h6>
+                        <small>@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                    @if (notification.Type == NotificationType.CourseInvitation && !notification.IsRead)
+                    {
+                         <form asp-action="AcceptInvitation" asp-controller="Notification" method="post" class="mt-2">
+                            <input type="hidden" name="notificationId" value="@notification.Id" />
+                            <button type="submit" class="btn btn-success btn-sm">Присоединиться к курсу</button>
+                        </form>
+                    }
+
+                     else if (!notification.IsRead)
+                    {
+                        <form asp-action="MarkAsRead" method="post" class="mt-2">
+                            <input type="hidden" name="id" value="@notification.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Отметить как прочитанное</button>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            У вас пока нет уведомлений.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Обновление счетчика непрочитанных уведомлений каждые 30 секунд
+        setInterval(async () => {
+            const response = await fetch('@Url.Action("GetUnreadCount")');
+            const data = await response.json();
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                badge.textContent = data.count;
+                badge.style.display = data.count > 0 ? 'inline' : 'none';
+            }
+        }, 30000);
+    </script>
+} 
