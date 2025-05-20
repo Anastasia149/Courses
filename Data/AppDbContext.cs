@@ -14,6 +14,7 @@ namespace Courses.Data
         public DbSet<Course> Courses { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Homework> Homeworks { get; set; }
+        public DbSet<HomeworkFile> HomeworkFiles { get; set; }
         public DbSet<UserCourse> UserCourses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
 
@@ -34,6 +35,30 @@ namespace Courses.Data
                 .HasOne(uc => uc.Course)
                 .WithMany(c => c.UserCourses)
                 .HasForeignKey(uc => uc.CourseId);
+
+            // Настройка связи между Course и Lesson
+            builder.Entity<Lesson>()
+                .HasOne(l => l.Course)
+                .WithMany(c => c.Lessons)
+                .HasForeignKey(l => l.CourseId);
+
+            // Настройка связи между Lesson и Homework
+            builder.Entity<Homework>()
+                .HasOne(h => h.Lesson)
+                .WithMany(l => l.Homeworks)
+                .HasForeignKey(h => h.LessonId);
+
+            // Настройка связи между User и Homework
+            builder.Entity<Homework>()
+                .HasOne(h => h.Student)
+                .WithMany()
+                .HasForeignKey(h => h.StudentId);
+
+            // Настройка связи между Homework и HomeworkFile
+            builder.Entity<HomeworkFile>()
+                .HasOne(f => f.Homework)
+                .WithMany(h => h.Files)
+                .HasForeignKey(f => f.HomeworkId);
 
             // Остальные настройки...
             builder.Entity<Course>()

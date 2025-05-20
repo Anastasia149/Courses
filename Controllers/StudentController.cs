@@ -56,50 +56,56 @@ namespace Courses.Controllers
             return View(new StudentCoursesViewModel { EnrolledCourses = enrolledCourses });
         }
 
-        public async Task<IActionResult> CourseDetails(int id)
+        public async Task<IActionResult> CourseDetails(int id, int? lessonId = null)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var course = await _context.UserCourses
+            var userCourse = await _context.UserCourses
                 .Include(uc => uc.Course)
                     .ThenInclude(c => c.Teacher)
                 .Include(uc => uc.Course)
                     .ThenInclude(c => c.Lessons)
                         .ThenInclude(l => l.Homeworks)
-                .Where(uc => uc.UserId == userId && uc.CourseId == id)
-                .Select(uc => new StudentCourseDetailsViewModel
-                {
-                    CourseId = uc.CourseId,
-                    Title = uc.Course.Title,
-                    Description = uc.Course.Description,
-                    TeacherName = uc.Course.Teacher.FullName,
-                    Lessons = uc.Course.Lessons
-                        .OrderBy(l => l.Order)
-                        .Select(l => new StudentLessonViewModel
-                        {
-                            Id = l.Id,
-                            Title = l.Title,
-                            Description = l.Content,
-                            Order = l.Order,
-                            HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
-                            HomeworkStatus = l.Homeworks
-                                .Where(h => h.StudentId == userId)
-                                .Select(h => h.Status)
-                                .FirstOrDefault()
-                        })
-                        .ToList()
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CourseId == id);
 
-            if (course == null)
+            if (userCourse == null)
             {
                 return NotFound();
             }
 
-            // Добавляем файлы для каждого урока после выполнения LINQ-запроса
+            var course = new StudentCourseDetailsViewModel
+            {
+                CourseId = userCourse.CourseId,
+                Title = userCourse.Course.Title,
+                Description = userCourse.Course.Description,
+                TeacherName = userCourse.Course.Teacher.FullName,
+                Lessons = userCourse.Course.Lessons
+                    .OrderBy(l => l.Order)
+                    .Select(l => new StudentLessonViewModel
+                    {
+                        Id = l.Id,
+                        Title = l.Title,
+                        Description = l.Content,
+                        Order = l.Order,
+                        HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
+                        HomeworkStatus = l.Homeworks
+                            .Where(h => h.StudentId == userId)
+                            .Select(h => h.Status)
+                            .FirstOrDefault()
+                    })
+                    .ToList()
+            };
+
+            // Добавляем файлы для каждого урока
             foreach (var lesson in course.Lessons)
             {
                 lesson.Files = GetLessonFiles(lesson.Id);
             }
+
+            // Выбор урока
+            if (lessonId.HasValue)
+                course.SelectedLesson = course.Lessons.FirstOrDefault(l => l.Id == lessonId.Value);
+            else
+                course.SelectedLesson = course.Lessons.OrderBy(l => l.Order).FirstOrDefault();
 
             return View(course);
         }

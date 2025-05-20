@@ -27,6 +27,7 @@ namespace Courses.ViewModels
         public string Description { get; set; }
         public string TeacherName { get; set; }
         public List<StudentLessonViewModel> Lessons { get; set; } = new();
+        public StudentLessonViewModel SelectedLesson { get; set; }
     }
 
     public class StudentLessonViewModel

@@ -4,6 +4,7 @@ using Courses.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Courses.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250520165325_AddNotificationTitle")]
+    partial class AddNotificationTitle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,54 +96,13 @@ namespace Courses.Migrations
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("LessonId");
 
                     b.HasIndex("StudentId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Homeworks");
-                });
-
-            modelBuilder.Entity("Courses.Models.HomeworkFile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("FileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("HomeworkId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UploadedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HomeworkId");
-
-                    b.ToTable("HomeworkFiles");
                 });
 
             modelBuilder.Entity("Courses.Models.Lesson", b =>
@@ -479,29 +441,14 @@ namespace Courses.Migrations
                         .IsRequired();
 
                     b.HasOne("Courses.Models.User", "Student")
-                        .WithMany()
+                        .WithMany("Homeworks")
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Courses.Models.User", null)
-                        .WithMany("Homeworks")
-                        .HasForeignKey("UserId");
-
                     b.Navigation("Lesson");
 
                     b.Navigation("Student");
-                });
-
-            modelBuilder.Entity("Courses.Models.HomeworkFile", b =>
-                {
-                    b.HasOne("Courses.Models.Homework", "Homework")
-                        .WithMany("Files")
-                        .HasForeignKey("HomeworkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Homework");
                 });
 
             modelBuilder.Entity("Courses.Models.Lesson", b =>
@@ -619,11 +566,6 @@ namespace Courses.Migrations
                     b.Navigation("Lessons");
 
                     b.Navigation("UserCourses");
-                });
-
-            modelBuilder.Entity("Courses.Models.Homework", b =>
-                {
-                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Courses.Models.Lesson", b =>

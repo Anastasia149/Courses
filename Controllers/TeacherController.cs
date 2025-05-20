@@ -5,6 +5,7 @@
     using Microsoft.AspNetCore.Identity;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
+    using Courses.Services; 
 
     namespace Courses.Controllers
     {
@@ -15,17 +16,20 @@
             private readonly UserManager<User> _userManager;
             private readonly ILogger<TeacherController> _logger;
             private readonly IWebHostEnvironment _environment;
+            private readonly INotificationService _notificationService;
 
         public TeacherController(
                 AppDbContext context,
                 UserManager<User> userManager,
                 ILogger<TeacherController> logger,
-                IWebHostEnvironment environment)
+                IWebHostEnvironment environment,
+                INotificationService notificationService)
             {
                 _context = context;
                 _userManager = userManager;
                 _logger = logger;
                 _environment= environment;
+                _notificationService = notificationService;
         }
 
         // Главная страница преподавателя
@@ -208,6 +212,14 @@
                     _logger.LogInformation("Пытаюсь сохранить: Feedback={Feedback}, Status={Status}", model.Feedback, model.Status);
                     _logger.LogInformation("Сохранено");
                     await _context.SaveChangesAsync();
+
+                    await _notificationService.CreateNotificationAsync(
+                        homework.StudentId,
+                        "Изменена отметка по домашнему заданию",
+                        $"Ваша домашняя работа по уроку '{homework.Lesson.Title}' была проверена. Новый статус: {homework.Status}",
+                        NotificationType.HomeworkGraded,
+                        homework.Id
+                    );
 
                     TempData["SuccessMessage"] = "Работа успешно проверена!";
                     if (!string.IsNullOrEmpty(returnUrl))

@@ -1,0 +1,63 @@
+@model Courses.ViewModels.StudentLessonViewModel
+<script>
+    var lessonIdForHomework = @Model.Id;
+    </script>
+<div class="homework-submission-container mt-4">
+    <h4>Домашнее задание</h4>
+    <div class="card">
+        <div class="card-body">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["Success"]
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">
+                    @TempData["Error"]
+                </div>
+            }
+
+            <div id="homeworkStatus" class="mb-3">
+                <!-- Статус будет загружен через AJAX -->
+            </div>
+
+            <div id="submittedHomework" class="mb-4" style="display: none;">
+                <h5>Отправленное задание:</h5>
+                <div class="card">
+                    <div class="card-body">
+                        <div id="homeworkAnswer" class="mb-3"></div>
+                        <div id="homeworkFiles" class="mb-3">
+                            <h6>Прикрепленные файлы:</h6>
+                            <ul class="list-group" id="filesList"></ul>
+                        </div>
+                        <div id="homeworkFeedback" class="alert alert-info" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="homeworkForm" asp-controller="Homework" asp-action="Submit" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="lessonId" value="@Model.Id" />
+                <div class="mb-3">
+                    <label for="answer" class="form-label">Ваш ответ:</label>
+                    <textarea class="form-control" id="answer" name="answer" rows="5" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="files" class="form-label">Прикрепить файлы:</label>
+                    <input type="file" class="form-control" id="files" name="files" multiple>
+                    <div class="form-text">Можно выбрать несколько файлов. Максимальный размер каждого файла: 10MB</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" id="submitButton">
+                        <i class="fas fa-paper-plane"></i> Отправить задание
+                    </button>
+                </div>
+            </form>
+            <button type="button" class="btn btn-danger mt-2" id="cancelButton" style="display: none;">
+                <i class="fas fa-times"></i> Отменить отправку
+            </button>
+        </div>
+    </div>
+</div>
+

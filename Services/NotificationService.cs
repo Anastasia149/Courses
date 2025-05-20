@@ -42,10 +42,42 @@ namespace Courses.Services
             var notification = new Notification
             {
                 UserId = userId,
+                Title = "Уведомление",
                 Message = message,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task CreateNotificationAsync(string userId, string title, string message, NotificationType type, int? relatedId = null)
+        {
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = title,
+                Message = message,
+                Type = type,
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+
+            // Устанавливаем связанные сущности в зависимости от типа уведомления
+            switch (type)
+            {
+                case NotificationType.HomeworkSubmitted:
+                case NotificationType.HomeworkGraded:
+                    notification.HomeworkId = relatedId;
+                    break;
+                case NotificationType.CourseInvitation:
+                    notification.CourseId = relatedId;
+                    break;
+                case NotificationType.NewLesson:
+                    notification.LessonId = relatedId;
+                    break;
+            }
 
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();

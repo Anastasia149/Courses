@@ -1,0 +1,31 @@
+.materials-list {
+    margin-bottom: 1rem;
+}
+.material-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+    transition: box-shadow 0.2s;
+}
+.material-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: #e9ecef;
+}
+.material-card a {
+    text-decoration: none;
+    color: #212529;
+    font-weight: 500;
+    margin-left: 8px;
+    word-break: break-all;
+}
+.material-card i {
+    margin-right: 8px;
+}
+.material-card img {
+    border-radius: 4px;
+    margin-right: 10px;
+} 

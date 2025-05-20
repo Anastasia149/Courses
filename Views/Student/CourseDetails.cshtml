@@ -3,6 +3,7 @@
 @model StudentCourseDetailsViewModel
 @{
     ViewData["Title"] = Model.Title;
+    <link rel="stylesheet" href="~/css/course-details.css" />
 }
 
 <div class="container mt-4">
@@ -14,83 +15,64 @@
     </nav>
 
     <div class="row">
-        <div class="col-md-8">
-            <h1 class="mb-3">@Model.Title</h1>
-            <p class="lead">@Model.Description</p>
-            <p class="text-muted">
-                <i class="fas fa-user me-2"></i>Преподаватель: @Model.TeacherName
-            </p>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <h2>Уроки</h2>
-            @if (Model.Lessons.Any())
-            {
-                <div class="list-group">
-                    @foreach (var lesson in Model.Lessons)
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6>Уроки</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    @foreach (var lesson in Model.Lessons.OrderBy(l => l.Order))
                     {
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-1">@lesson.Order. @lesson.Title</h5>
-                                    <div class="mb-1">@Html.Raw(lesson.Description)</div>
-                                    @if (lesson.Files != null && lesson.Files.Any())
+                        <a class="list-group-item list-group-item-action @(Model.SelectedLesson?.Id == lesson.Id ? "active" : "")"
+                           asp-action="CourseDetails" asp-route-id="@Model.CourseId" asp-route-lessonId="@lesson.Id">
+                            @lesson.Order. @lesson.Title
+                        </a>
+                    }
+                </div>
+            </div>
+            <!-- Форма домашки для выбранного урока -->
+            @if (Model.SelectedLesson != null)
+            {
+                @await Html.PartialAsync("_HomeworkSubmission", Model.SelectedLesson)
+            }
+        </div>
+        <div class="col-md-8">
+            @if (Model.SelectedLesson != null)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h4>@Model.SelectedLesson.Title</h4>
+                    </div>
+                    <div class="card-body">
+                        @Html.Raw(Model.SelectedLesson.Description)
+                        @if (Model.SelectedLesson.Files != null && Model.SelectedLesson.Files.Any())
+                        {
+                            <div class="mt-3">
+                                <strong>Материалы:</strong>
+                                <div class="materials-list d-flex flex-wrap gap-2 mt-2">
+                                    @foreach (var file in Model.SelectedLesson.Files)
                                     {
-                                        <div class="mt-2">
-                                            <strong>Материалы:</strong>
-                                            <ul>
-                                            @foreach (var file in lesson.Files)
+                                        <div class="material-card p-2 border rounded bg-light d-flex align-items-center" style="min-width: 220px;">
+                                            @if (file.FileName.ToLower().EndsWith(".jpg") || file.FileName.ToLower().EndsWith(".jpeg") || file.FileName.ToLower().EndsWith(".png") || file.FileName.ToLower().EndsWith(".gif"))
                                             {
-                                                <li>
-                                                    @if (file.FileName.ToLower().EndsWith(".jpg") || file.FileName.ToLower().EndsWith(".jpeg") || file.FileName.ToLower().EndsWith(".png") || file.FileName.ToLower().EndsWith(".gif"))
-                                                    {
-                                                        <img src="@file.FilePath" alt="@file.FileName" style="max-width:200px;max-height:200px;" />
-                                                    }
-                                                    else
-                                                    {
-                                                        <a href="@file.FilePath" target="_blank">@file.FileName</a>
-                                                    }
-                                                </li>
+                                                <img src="@file.FilePath" alt="@file.FileName" style="max-width:60px;max-height:60px;object-fit:cover;margin-right:10px;" />
                                             }
-                                            </ul>
+                                            else
+                                            {
+                                                <i class="fas fa-file-alt fa-2x me-2 text-primary"></i>
+                                            }
+                                            <a href="@file.FilePath" target="_blank">@file.FileName</a>
                                         </div>
                                     }
                                 </div>
-                                <div class="text-end">
-                                    @if (lesson.HasHomework)
-                                    {
-                                        <span class="badge @(lesson.HomeworkStatus switch {
-                                            HomeworkStatus.Approved => "bg-success",
-                                            HomeworkStatus.Pending => "bg-warning",
-                                            HomeworkStatus.Rejected => "bg-danger",
-                                            _ => "bg-secondary"
-                                        })">
-                                            @(lesson.HomeworkStatus switch {
-                                                HomeworkStatus.Approved => "Принято",
-                                                HomeworkStatus.Pending => "На проверке",
-                                                HomeworkStatus.Rejected => "Отклонено",
-                                                _ => "Не сдано"
-                                            })
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Не сдано</span>
-                                    }
-                                </div>
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             }
             else
             {
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    В этом курсе пока нет уроков
-                </div>
+                <div class="alert alert-info mt-4">Выберите урок для просмотра материала.</div>
             }
         </div>
     </div>

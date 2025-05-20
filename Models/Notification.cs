@@ -6,6 +6,8 @@ namespace Courses.Models
     public enum NotificationType
     {
         CourseInvitation,
+        HomeworkSubmitted,
+        HomeworkGraded,
         HomeworkReviewed,
         NewLesson
     }
@@ -22,6 +24,9 @@ namespace Courses.Models
 
         [Required]
         public NotificationType Type { get; set; }
+
+        [Required]
+        public string Title { get; set; }
 
         [Required]
         public string Message { get; set; }
