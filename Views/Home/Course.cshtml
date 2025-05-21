@@ -3,6 +3,12 @@
 @{
     ViewData["Title"] = "Мои курсы";
     <link rel="stylesheet" href="~/css/course.css" />
+    // Получаем выбранный lessonId из query или берем первый урок
+    var selectedLessonId = Context.Request.Query["lessonId"].FirstOrDefault();
+    int lessonIdInt = 0;
+    int.TryParse(selectedLessonId, out lessonIdInt);
+    var selectedLesson = Model.SelectedCourse?.Course.Lessons.FirstOrDefault(l => l.Id == lessonIdInt)
+        ?? Model.SelectedCourse?.Course.Lessons.OrderBy(l => l.Order).FirstOrDefault();
 }
 
 <div class="teacher-courses-container">
@@ -221,6 +227,9 @@
                                                             </button>
                                                         </form>
                                                     </div>
+                                                    <button type="button" class="btn btn-info btn-sm view-comments-btn" data-lesson-id="@lesson.Id" data-lesson-title="@lesson.Title">
+                                                        <i class="fas fa-comments"></i> Посмотреть комментарии
+                                                    </button>
                                                 </div>
                                             </div>
                                         }
@@ -323,6 +332,28 @@
     </div>
 </div>
 
+<div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentsModalTitle">Комментарии</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <div id="commentsList"></div>
+                <form id="addCommentForm" class="mt-3">
+                    <input type="hidden" id="parentCommentId" name="parentCommentId" value="" />
+                    <div class="mb-2">
+                        <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cancelReply" style="display:none;">Отмена</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
          // Обработка модального окна удаления
@@ -395,5 +426,9 @@
                 $(`#courseTabs button[data-bs-target="#${tab}"]`).tab('show');
             }
         });
+
+        window.lessonIdForComments = @selectedLesson.Id;
     </script>
+
+    <script src="~/js/lesson-comments-modal.js"></script>
 }

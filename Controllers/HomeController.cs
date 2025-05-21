@@ -288,7 +288,7 @@ namespace Courses.Controllers
                 }
 
                 TempData["SuccessMessage"] = "Профиль успешно обновлён!";
-                return RedirectToAction(nameof(Teacher));
+                return RedirectToAction(nameof(Student));
             }
 
             // Если ModelState невалиден

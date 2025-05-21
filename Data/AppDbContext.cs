@@ -17,6 +17,7 @@ namespace Courses.Data
         public DbSet<HomeworkFile> HomeworkFiles { get; set; }
         public DbSet<UserCourse> UserCourses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<LessonComment> LessonComments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

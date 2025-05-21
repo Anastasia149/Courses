@@ -64,9 +64,24 @@
                                             <a href="@file.FilePath" target="_blank">@file.FileName</a>
                                         </div>
                                     }
-                                </div>
+                                </div>  
                             </div>
                         }
+                        <script>
+                            window.lessonIdForComments = @Model.SelectedLesson.Id;
+                        </script>
+                        <div class="mt-4">
+                            <h5>Комментарии</h5>
+                            <div id="commentsList"></div>
+                            <form id="addCommentForm" class="mt-3">
+                                <input type="hidden" id="parentCommentId" name="parentCommentId" value="" />
+                                <div class="mb-2">
+                                    <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="cancelReply" style="display:none;">Отмена</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             }
@@ -77,3 +92,5 @@
         </div>
     </div>
 </div> 
+
+<script src="~/js/lesson-comments.js"></script>
