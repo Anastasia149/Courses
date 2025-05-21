@@ -33,6 +33,12 @@
             <!-- Форма домашки для выбранного урока -->
             @if (Model.SelectedLesson != null)
             {
+                if (Model.SelectedLesson.HasHomework && Model.SelectedLesson.HomeworkStatus == Courses.Models.HomeworkStatus.Approved)
+                {
+                    <div class="alert alert-success mb-2" style="max-width: 400px;">
+                        ✅ Задание принято!
+                    </div>
+                }
                 @await Html.PartialAsync("_HomeworkSubmission", Model.SelectedLesson)
             }
         </div>
