@@ -8,8 +8,11 @@ namespace Courses.Models
         CourseInvitation,
         HomeworkSubmitted,
         HomeworkGraded,
-        HomeworkReviewed,
-        NewLesson
+        HomeworkCancelled,
+        NewLesson,
+        CertificateIssued,
+        CourseEnrolled,
+        CourseCompleted
     }
 
     public class Notification

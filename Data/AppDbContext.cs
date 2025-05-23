@@ -18,6 +18,7 @@ namespace Courses.Data
         public DbSet<UserCourse> UserCourses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<LessonComment> LessonComments { get; set; }
+        public DbSet<Certificate> Certificates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

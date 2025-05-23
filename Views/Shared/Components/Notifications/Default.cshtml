@@ -49,7 +49,7 @@
         return notification.Type switch
         {
             Courses.Models.NotificationType.CourseInvitation => Url.Action("Course", "Student"),
-            Courses.Models.NotificationType.HomeworkReviewed => Url.Action("CourseDetails", "Student", new { id = notification.CourseId }),
+            Courses.Models.NotificationType.HomeworkCancelled => Url.Action("CourseDetails", "Student", new { id = notification.CourseId }),
             Courses.Models.NotificationType.NewLesson => Url.Action("CourseDetails", "Student", new { id = notification.CourseId }),
             _ => "#"
         };

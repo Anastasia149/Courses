@@ -8,6 +8,11 @@ using Courses.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using Microsoft.AspNetCore.Identity;
+using System.Threading.Tasks;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace Courses.Controllers
 {
@@ -16,11 +21,13 @@ namespace Courses.Controllers
     {
         private readonly AppDbContext _context;
         private readonly INotificationService _notificationService;
+        private readonly UserManager<User> _userManager;
 
-        public StudentController(AppDbContext context, INotificationService notificationService)
+        public StudentController(AppDbContext context, INotificationService notificationService, UserManager<User> userManager)
         {
             _context = context;
             _notificationService = notificationService;
+            _userManager = userManager;
         }
 
         public async Task<IActionResult> Course()
@@ -122,6 +129,103 @@ namespace Courses.Controllers
                     FileName = Path.GetFileName(f),
                     FilePath = "/uploads/lessons/" + lessonId + "/" + Path.GetFileName(f)
                 }).ToList();
+        }
+
+        public async Task<IActionResult> Certificates()
+        {
+            var userId = _userManager.GetUserId(User);
+            var certificates = await _context.Certificates
+                .Include(c => c.Course)
+                .Include(c => c.Student)
+                .Where(c => c.StudentId == userId)
+                .OrderByDescending(c => c.IssuedAt)
+                .ToListAsync();
+
+            return View(certificates);
+        }
+
+        public async Task<IActionResult> DownloadCertificate(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var certificate = await _context.Certificates
+                .Include(c => c.Course)
+                .Include(c => c.Student)
+                .FirstOrDefaultAsync(c => c.Id == id && c.StudentId == userId);
+
+            if (certificate == null)
+                return NotFound();
+
+            // Генерация PDF (пример с QuestPDF)
+            var pdfBytes = GenerateCertificatePdf(certificate);
+
+            var fileName = $"Certificate_{certificate.Course.Title}_{certificate.IssuedAt:yyyyMMdd}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
+        // Пример генерации PDF с помощью QuestPDF
+        private byte[] GenerateCertificatePdf(Certificate cert)
+        {
+            var doc = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(2, Unit.Centimetre);
+
+                    page.Content().Column(column =>
+                    {
+                        // Фон
+                        column.Item().Background(Colors.LightBlue.Lighten5);
+
+                        // Основной контент
+                        column.Item().Padding(2, Unit.Centimetre).Column(content =>
+                        {
+                            // Верхняя декоративная линия
+                            content.Item().PaddingBottom(20).LineHorizontal(1).LineColor(Colors.Blue.Medium);
+
+                            // Заголовок
+                            content.Item().AlignCenter().Text("СЕРТИФИКАТ").FontSize(40).Bold().FontColor(Colors.Blue.Darken3);
+                            content.Item().PaddingBottom(20).AlignCenter().Text("ОБ УСПЕШНОМ ОСВОЕНИИ КУРСА").FontSize(16).FontColor(Colors.Blue.Medium);
+
+                            // Основной текст
+                            content.Item().PaddingTop(40).AlignCenter().Text("Настоящий сертификат выдан").FontSize(14);
+                            content.Item().PaddingTop(10).AlignCenter().Text(cert.Student.FullName).FontSize(24).Bold();
+                            content.Item().PaddingTop(20).AlignCenter().Text("за успешное освоение курса").FontSize(14);
+                            content.Item().PaddingTop(10).AlignCenter().Text(cert.Course.Title).FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
+
+                            // Дата выдачи
+                            content.Item().PaddingTop(40).AlignCenter().Text($"Дата выдачи: {cert.IssuedAt:dd.MM.yyyy}").FontSize(14);
+
+                            // Нижняя декоративная линия
+                            content.Item().PaddingTop(40).LineHorizontal(1).LineColor(Colors.Blue.Medium);
+
+                            // Подписи
+                            content.Item().PaddingTop(20).Row(row =>
+                            {
+                                row.RelativeItem().AlignCenter().Text("Директор").FontSize(12);
+                                row.RelativeItem().AlignCenter().Text("Преподаватель").FontSize(12);
+                            });
+                        });
+
+                        // Декоративные элементы в углах
+                        column.Item().Row(row =>
+                        {
+                            // Верхний правый угол
+                            row.RelativeItem().AlignRight().PaddingRight(2, Unit.Centimetre).PaddingTop(2, Unit.Centimetre)
+                                .Width(100).Height(100).Background(Colors.Blue.Lighten5);
+
+                            // Нижний левый угол
+                            row.RelativeItem().AlignLeft().PaddingLeft(2, Unit.Centimetre).PaddingBottom(2, Unit.Centimetre)
+                                .Width(100).Height(100).Background(Colors.Blue.Lighten5);
+                        });
+                    });
+
+                    // Добавляем рамку
+                    page.Footer().Border(1).BorderColor(Colors.Blue.Medium);
+                });
+            });
+
+            return doc.GeneratePdf();
         }
     }
 } 

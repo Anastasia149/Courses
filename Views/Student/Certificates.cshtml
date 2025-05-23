@@ -1,0 +1,222 @@
+@model IEnumerable<Courses.Models.Certificate>
+
+@{
+    ViewData["Title"] = "Мои сертификаты";
+    <link rel="stylesheet" href="~/css/certificate.css" asp-append-version="true" />
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Мои сертификаты</h1>
+        <span class="badge bg-primary">@Model.Count() сертификатов</span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            У вас пока нет сертификатов. Сертификаты выдаются после успешного завершения курса.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var cert in Model)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">@cert.Course.Title</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-certificate text-primary fa-2x me-3"></i>
+                                <div>
+                                    <small class="text-muted d-block">Выдан</small>
+                                    <strong>@cert.IssuedAt.ToString("dd.MM.yyyy")</strong>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="@Url.Action("DownloadCertificate", new { id = cert.Id })" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-download me-2"></i>Скачать PDF
+                                </a>
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#previewModal" 
+                                        data-certificate-id="@cert.Id"
+                                        data-certificate-title="@cert.Course.Title"
+                                        data-student-name="@cert.Student.FullName"
+                                        data-issue-date="@cert.IssuedAt.ToString("dd.MM.yyyy")">
+                                    <i class="fas fa-eye me-2"></i>Предпросмотр
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Модальное окно предпросмотра -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Предпросмотр сертификата</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="certificate-preview">
+                    <div class="certificate-content">
+                        <div class="certificate-header">
+                            <div class="decorative-line"></div>
+                            <h1>СЕРТИФИКАТ</h1>
+                            <h2>ОБ УСПЕШНОМ ОСВОЕНИИ КУРСА</h2>
+                            <div class="decorative-line"></div>
+                        </div>
+                        
+                        <div class="certificate-body">
+                            <p>Настоящий сертификат выдан</p>
+                            <h3 class="student-name"></h3>
+                            <p>за успешное освоение курса</p>
+                            <h4 class="course-title"></h4>
+                            <p class="issue-date"></p>
+                        </div>
+
+                        <div class="certificate-footer">
+                            <div class="decorative-line"></div>
+                            <div class="signatures">
+                                <div class="signature">
+                                    <span>Директор</span>
+                                </div>
+                                <div class="signature">
+                                    <span>Преподаватель</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="corner-decoration top-right"></div>
+                        <div class="corner-decoration bottom-left"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-shadow {
+        transition: all 0.3s ease;
+    }
+    .hover-shadow:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+
+    .certificate-preview {
+        background-color: #f8f9fa;
+        padding: 2rem;
+        min-height: 500px;
+        position: relative;
+    }
+
+    .certificate-content {
+        background-color: white;
+        padding: 2rem;
+        border: 1px solid #dee2e6;
+        position: relative;
+        min-height: 450px;
+    }
+
+    .certificate-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .certificate-header h1 {
+        color: #0d6efd;
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+
+    .certificate-header h2 {
+        color: #0d6efd;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .certificate-body {
+        text-align: center;
+        margin: 2rem 0;
+    }
+
+    .certificate-body .student-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+
+    .certificate-body .course-title {
+        color: #0d6efd;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+
+    .certificate-footer {
+        margin-top: 2rem;
+    }
+
+    .signatures {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1rem;
+    }
+
+    .decorative-line {
+        height: 2px;
+        background-color: #0d6efd;
+        margin: 1rem 0;
+    }
+
+    .corner-decoration {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        background-color: #e7f1ff;
+    }
+
+    .corner-decoration.top-right {
+        top: 0;
+        right: 0;
+    }
+
+    .corner-decoration.bottom-left {
+        bottom: 0;
+        left: 0;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const previewModal = document.getElementById('previewModal');
+            if (previewModal) {
+                previewModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const studentName = button.getAttribute('data-student-name');
+                    const courseTitle = button.getAttribute('data-certificate-title');
+                    const issueDate = button.getAttribute('data-issue-date');
+
+                    const modal = this;
+                    modal.querySelector('.student-name').textContent = studentName;
+                    modal.querySelector('.course-title').textContent = courseTitle;
+                    modal.querySelector('.issue-date').textContent = `Дата выдачи: ${issueDate}`;
+                });
+            }
+        });
+    </script>
+}

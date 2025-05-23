@@ -13,28 +13,31 @@
             <form asp-action="AddLesson" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="CourseId" />
+                
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                 <div class="mb-3">
-                    <label asp-for="Title" class="form-label">Название</label>
-                    <input asp-for="Title" class="form-control" />
+                    <label asp-for="Title" class="form-label"></label>
+                    <input asp-for="Title" class="form-control" placeholder="Введите название урока" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="Order" class="form-label">Порядок</label>
-                    <input asp-for="Order" class="form-control" type="number" min="1" />
+                    <label asp-for="Order" class="form-label"></label>
+                    <input asp-for="Order" class="form-control" type="number" min="1" placeholder="Введите порядковый номер урока" />
                     <span asp-validation-for="Order" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="Content" class="form-label">Содержание</label>
-                    <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                    <label asp-for="Content" class="form-label"></label>
+                    <textarea asp-for="Content" class="form-control" rows="6" placeholder="Введите содержание урока"></textarea>
+                    <span asp-validation-for="Content" class="text-danger"></span>
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label">Дополнительные материалы</label>
-                    <input type="file" name="Attachments" class="form-control" multiple />
-                    <small class="form-text text-muted">Загрузите изображения, видео, PDF и т.д.</small>
+                    <label asp-for="Attachments" class="form-label"></label>
+                    <input type="file" name="Attachments" class="form-control" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif" />
+                    <small class="form-text text-muted">Поддерживаемые форматы: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF</small>
                 </div>
 
                 <div class="d-flex justify-content-between pt-3">
@@ -54,4 +57,12 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        // Предотвращаем отправку формы при нажатии Enter в текстовом поле
+        document.querySelector('textarea').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+            }
+        });
+    </script>
 }

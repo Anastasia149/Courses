@@ -3,8 +3,12 @@ using Courses.Models;
 using Courses.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Настройка QuestPDF
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -27,6 +31,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICertificateService, CertificateService>();
 
 var app = builder.Build();
 

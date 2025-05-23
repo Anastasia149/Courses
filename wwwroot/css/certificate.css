@@ -1,0 +1,26 @@
+﻿.certificate-preview {
+    background: linear-gradient(45deg, #f8f9fa, #ffffff);
+    border: 2px solid #dee2e6;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+.card-header {
+    border-bottom: none;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+    .btn-primary:hover {
+        background-color: #0b5ed7;
+        border-color: #0a58ca;
+    }

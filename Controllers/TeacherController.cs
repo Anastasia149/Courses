@@ -17,19 +17,22 @@
             private readonly ILogger<TeacherController> _logger;
             private readonly IWebHostEnvironment _environment;
             private readonly INotificationService _notificationService;
+            private readonly ICertificateService _certificateService;
 
         public TeacherController(
                 AppDbContext context,
                 UserManager<User> userManager,
                 ILogger<TeacherController> logger,
                 IWebHostEnvironment environment,
-                INotificationService notificationService)
+                INotificationService notificationService,
+                ICertificateService certificateService)
             {
                 _context = context;
                 _userManager = userManager;
                 _logger = logger;
                 _environment= environment;
                 _notificationService = notificationService;
+                _certificateService = certificateService;
         }
 
         // Главная страница преподавателя
@@ -209,17 +212,25 @@
 
                     homework.Feedback = model.Feedback;
                     homework.Status = model.Status;
+                    homework.SubmittedAt = DateTime.UtcNow;
                     _logger.LogInformation("Пытаюсь сохранить: Feedback={Feedback}, Status={Status}", model.Feedback, model.Status);
                     _logger.LogInformation("Сохранено");
                     await _context.SaveChangesAsync();
 
                     await _notificationService.CreateNotificationAsync(
                         homework.StudentId,
-                        "Изменена отметка по домашнему заданию",
-                        $"Ваша домашняя работа по уроку '{homework.Lesson.Title}' была проверена. Новый статус: {homework.Status}",
-                        NotificationType.HomeworkGraded,
-                        homework.Id
+                        "Домашнее задание проверено",
+                        $"Ваше домашнее задание по уроку \"{homework.Lesson.Title}\" было проверено",
+                        NotificationType.HomeworkGraded
                     );
+
+                    // Проверяем и выдаем сертификат, если все задания выполнены
+                    if (model.Status == HomeworkStatus.Approved)
+                    {
+                        _logger.LogInformation($"Попытка выдачи сертификата для студента {homework.StudentId} по курсу {homework.Lesson.CourseId}");
+                        var certificateIssued = await _certificateService.IssueCertificateIfEligibleAsync(homework.StudentId, homework.Lesson.CourseId);
+                        _logger.LogInformation($"Результат выдачи сертификата: {certificateIssued}");
+                    }
 
                     TempData["SuccessMessage"] = "Работа успешно проверена!";
                     if (!string.IsNullOrEmpty(returnUrl))
@@ -239,53 +250,98 @@
             }
 
             [HttpGet]
-            public IActionResult AddLesson(int courseId)
+            public async Task<IActionResult> AddLesson(int courseId)
             {
-                return View(new AddLessonViewModel { CourseId = courseId });
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+                    var course = await _context.Courses
+                        .FirstOrDefaultAsync(c => c.Id == courseId && c.TeacherId == teacherId);
+
+                    if (course == null)
+                    {
+                        _logger.LogWarning($"Попытка доступа к несуществующему курсу {courseId} или курсу другого преподавателя");
+                        return NotFound();
+                    }
+
+                    return View(new AddLessonViewModel { CourseId = courseId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при загрузке формы создания урока для курса {courseId}");
+                    return StatusCode(500, "Произошла ошибка при загрузке формы");
+                }
             }
 
             [HttpPost]
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> AddLesson(AddLessonViewModel model)
             {
-                if (!ModelState.IsValid)
-                    return View(model);
-
-                var course = await _context.Courses.FindAsync(model.CourseId);
-                if (course == null || course.TeacherId != _userManager.GetUserId(User))
-                    return NotFound();
-
-                var lesson = new Lesson
+                try
                 {
-                    Title = model.Title,
-                    Order = model.Order,
-                    Content = model.Content,
-                    CourseId = model.CourseId,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Lessons.Add(lesson);
-                await _context.SaveChangesAsync();
-
-                // 📂 Сохраняем файлы
-                var uploadPath = Path.Combine("wwwroot", "uploads", "lessons", lesson.Id.ToString());
-                Directory.CreateDirectory(uploadPath);
-
-                if (model.Attachments != null)
-                {
-                    foreach (var file in model.Attachments)
+                    if (!ModelState.IsValid)
                     {
-                        if (file.Length > 0)
+                        _logger.LogWarning("ModelState невалиден при создании урока");
+                        foreach (var kvp in ModelState)
                         {
-                            var filePath = Path.Combine(uploadPath, file.FileName);
-                            using var stream = new FileStream(filePath, FileMode.Create);
-                            await file.CopyToAsync(stream);
+                            foreach (var err in kvp.Value.Errors)
+                            {
+                                _logger.LogWarning($" - {kvp.Key}: {err.ErrorMessage}");
+                            }
+                        }
+                        return View(model);
+                    }
+
+                    var teacherId = _userManager.GetUserId(User);
+                    var course = await _context.Courses
+                        .FirstOrDefaultAsync(c => c.Id == model.CourseId && c.TeacherId == teacherId);
+
+                    if (course == null)
+                    {
+                        _logger.LogWarning($"Попытка создания урока для несуществующего курса {model.CourseId} или курса другого преподавателя");
+                        return NotFound();
+                    }
+
+                    var lesson = new Lesson
+                    {
+                        Title = model.Title,
+                        Order = model.Order,
+                        Content = model.Content,
+                        CourseId = model.CourseId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Lessons.Add(lesson);
+                    await _context.SaveChangesAsync();
+
+                    // Сохраняем файлы
+                    if (model.Attachments != null && model.Attachments.Any())
+                    {
+                        var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
+                        Directory.CreateDirectory(uploadPath);
+
+                        foreach (var file in model.Attachments)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var fileName = Path.GetFileName(file.FileName);
+                                var filePath = Path.Combine(uploadPath, fileName);
+                                using var stream = new FileStream(filePath, FileMode.Create);
+                                await file.CopyToAsync(stream);
+                            }
                         }
                     }
-                }
 
-                TempData["SuccessMessage"] = "Урок успешно добавлен!";
-                return RedirectToAction("CourseDetails", new { id = model.CourseId });
+                    _logger.LogInformation($"Урок успешно создан: {lesson.Title} (ID: {lesson.Id}) для курса {course.Title}");
+                    TempData["SuccessMessage"] = "Урок успешно добавлен!";
+                    return RedirectToAction("CourseDetails", new { id = model.CourseId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при создании урока для курса {model.CourseId}");
+                    ModelState.AddModelError("", "Произошла ошибка при создании урока");
+                    return View(model);
+                }
             }
 
 
