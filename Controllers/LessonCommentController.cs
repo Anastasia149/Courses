@@ -20,6 +20,8 @@ namespace Courses.Controllers
         [HttpGet]
         public async Task<IActionResult> GetComments(int lessonId)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isTeacher = User.IsInRole("Teacher");
             var comments = await _context.LessonComments
                 .Include(c => c.User)
                 .Include(c => c.Replies).ThenInclude(r => r.User)
@@ -32,17 +34,19 @@ namespace Courses.Controllers
                 c.Id,
                 c.Text,
                 c.CreatedAt,
+                c.UserId,
                 UserName = c.User.UserName,
                 Replies = c.Replies.OrderBy(r => r.CreatedAt).Select(r => new
                 {
                     r.Id,
                     r.Text,
                     r.CreatedAt,
+                    r.UserId,
                     UserName = r.User.UserName
                 })
             });
 
-            return Json(result);
+            return Json(new { comments = result, currentUserId = userId, isTeacher });
         }
 
         [HttpPost]
@@ -55,6 +59,9 @@ namespace Courses.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Forbid("UserId is null!");
 
+            if (text != null && text.Length > 600)
+                return BadRequest("Комментарий не должен превышать 600 символов.");
+
             var comment = new LessonComment
             {
                 LessonId = lessonId,
@@ -65,6 +72,28 @@ namespace Courses.Controllers
             _context.LessonComments.Add(comment);
             await _context.SaveChangesAsync();
 
+            return Ok();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteComment(int commentId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isTeacher = User.IsInRole("Teacher");
+            var comment = await _context.LessonComments
+                .Include(c => c.Replies)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment == null)
+                return NotFound();
+            if (comment.UserId != userId && !isTeacher)
+                return Forbid();
+            // Удаляем все дочерние комментарии
+            if (comment.Replies != null && comment.Replies.Any())
+            {
+                _context.LessonComments.RemoveRange(comment.Replies);
+            }
+            _context.LessonComments.Remove(comment);
+            await _context.SaveChangesAsync();
             return Ok();
         }
     }

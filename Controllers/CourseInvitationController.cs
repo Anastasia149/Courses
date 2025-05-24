@@ -89,6 +89,7 @@ namespace Courses.Controllers
             {
                 UserId = student.Id,
                 Type = NotificationType.CourseInvitation,
+                Title = "Приглашение на курс",
                 Message = $"Вас пригласили на курс '{course.Title}'",
                 CourseId = viewModel.CourseId,
                 CreatedAt = DateTime.UtcNow,

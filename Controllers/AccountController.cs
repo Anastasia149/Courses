@@ -55,14 +55,15 @@ namespace Courses.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(model.Email))
             {
+                ModelState.AddModelError("Email", "Введите корректный email.");
                 return View(model);
             }
 
             // Проверяем код, если выбрана роль "Teacher"
             const string TeacherSecretCode = "A1111a!"; // Можно хранить в appsettings.json
-            if (model.Role == "Teacher" && model.TeacherCode != TeacherSecretCode)
+            if (model.Role == "Teacher" && (model.TeacherCode == null || model.TeacherCode != TeacherSecretCode))
             {
                 ModelState.AddModelError(string.Empty, "Неверный код преподавателя.");
                 return View(model);
@@ -97,7 +98,12 @@ namespace Courses.Controllers
 
             foreach (var error in result.Errors)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                if (error.Code == "InvalidUserName")
+                    ModelState.AddModelError(string.Empty, "Email может содержать только буквы, цифры и символы '@', '.'");
+                else if (error.Code == "DuplicateUserName")
+                    ModelState.AddModelError(string.Empty, "Пользователь с таким email уже зарегистрирован.");
+                else
+                    ModelState.AddModelError(string.Empty, error.Description);
             }
 
             return View(model);

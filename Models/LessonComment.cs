@@ -19,7 +19,7 @@ namespace Courses.Models
         public User User { get; set; }
 
         [Required]
-        [MaxLength(1000)]
+        [MaxLength(600)]
         public string Text { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

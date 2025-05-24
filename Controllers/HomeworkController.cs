@@ -138,11 +138,25 @@ namespace Courses.Controllers
             var homework = await _context.Homeworks
                 .Include(h => h.Lesson)
                     .ThenInclude(l => l.Course)
+                .Include(h => h.Files)
                 .FirstOrDefaultAsync(h => h.Id == homeworkId && h.StudentId == userId);
 
             if (homework == null)
                 return NotFound();
 
+            // Удаляем файлы из файловой системы
+            if (homework.Files != null && homework.Files.Any())
+            {
+                foreach (var file in homework.Files.ToList())
+                {
+                    if (System.IO.File.Exists(file.FilePath))
+                    {
+                        System.IO.File.Delete(file.FilePath);
+                    }
+                    _context.Remove(file); // Удаляем запись из БД
+                }
+                await _context.SaveChangesAsync();
+            }
 
             homework.Status = HomeworkStatus.Cancelled;
             await _context.SaveChangesAsync();

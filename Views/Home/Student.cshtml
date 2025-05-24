@@ -43,7 +43,7 @@
                         <label class="btn btn-outline-primary avatar-upload-btn">
                             <i class="fas fa-camera me-2"></i>Изменить аватар
                             <input asp-for="AvatarFile" class="d-none"
-                                   accept=".jpg,.jpeg,.png,.gif"
+                                   accept=".jpg,.jpeg,.png"
                                    onchange="previewAvatar(this)">
                         </label>
                         <span asp-validation-for="AvatarFile" class="text-danger d-block mt-2"></span>

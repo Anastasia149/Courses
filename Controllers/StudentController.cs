@@ -22,12 +22,14 @@ namespace Courses.Controllers
         private readonly AppDbContext _context;
         private readonly INotificationService _notificationService;
         private readonly UserManager<User> _userManager;
+        private readonly IWebHostEnvironment _environment;
 
-        public StudentController(AppDbContext context, INotificationService notificationService, UserManager<User> userManager)
+        public StudentController(AppDbContext context, INotificationService notificationService, UserManager<User> userManager, IWebHostEnvironment environment)
         {
             _context = context;
             _notificationService = notificationService;
             _userManager = userManager;
+            _environment = environment;
         }
 
         public async Task<IActionResult> Course()
@@ -226,6 +228,56 @@ namespace Courses.Controllers
             });
 
             return doc.GeneratePdf();
+        }
+
+        public async Task<IActionResult> UploadAvatar(IFormFile avatarFile)
+        {
+            if (avatarFile == null || avatarFile.Length == 0)
+            {
+                return BadRequest("Файл не выбран");
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+            var fileExtension = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
+            if (fileExtension == ".gif" || avatarFile.ContentType.ToLowerInvariant() == "image/gif")
+            {
+                ModelState.AddModelError("AvatarFile", "GIF-изображения не поддерживаются для аватаров. Загрузите JPG или PNG.");
+            }
+            else if (!allowedExtensions.Contains(fileExtension))
+            {
+                ModelState.AddModelError("AvatarFile", "Разрешены форматы: JPG, JPEG, PNG");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View();
+            }
+
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Пользователь не найден");
+            }
+
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var fileName = $"{userId}_{DateTime.UtcNow.Ticks}{fileExtension}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await avatarFile.CopyToAsync(stream);
+            }
+
+            user.AvatarPath = $"/uploads/avatars/{fileName}";
+            await _userManager.UpdateAsync(user);
+
+            return Ok(new { avatarPath = user.AvatarPath });
         }
     }
 } 

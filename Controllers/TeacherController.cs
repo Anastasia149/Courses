@@ -49,22 +49,27 @@
 
                 var model = new TeacherCoursesViewModel
                 {
-                    Courses = courses,
+                    Courses = courses ?? new List<Course>(),
                     SelectedCourse = courses.Any() ?
                         new CourseDetailsViewModel
                         {
                             Course = courses.First(),
                             EnrolledStudentsCount = await _context.UserCourses
                                 .CountAsync(uc => uc.CourseId == courses.First().Id),
-                            PendingHomeworks = courses.First().Lessons
-                                .SelectMany(l => l.Homeworks)
+                            PendingHomeworks = courses.First().Lessons?
+                                .SelectMany(l => l.Homeworks ?? Enumerable.Empty<Homework>())
                                 .Where(h => h.Status == HomeworkStatus.Pending)
-                                .ToList()
+                                .ToList() ?? new List<Homework>()
                         }
-                        : null
+                        : new CourseDetailsViewModel
+                        {
+                            Course = new Course { Lessons = new List<Lesson>() },
+                            EnrolledStudentsCount = 0,
+                            PendingHomeworks = new List<Homework>()
+                        }
                 };
 
-                return View("~/Views/Home/Course.cshtml", model); // Указываем явное имя представления
+                return View("~/Views/Home/Course.cshtml", model);
             }
             catch (Exception ex)
             {
@@ -320,14 +325,37 @@
                         var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
                         Directory.CreateDirectory(uploadPath);
 
+                        var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
                         foreach (var file in model.Attachments)
                         {
                             if (file.Length > 0)
                             {
+                                _logger.LogInformation($"Загрузка файла: {file.FileName}, размер: {file.Length}, тип: {file.ContentType}");
                                 var fileName = Path.GetFileName(file.FileName);
                                 var filePath = Path.Combine(uploadPath, fileName);
-                                using var stream = new FileStream(filePath, FileMode.Create);
-                                await file.CopyToAsync(stream);
+                                var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
+                                
+                                if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
+                                {
+                                    ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                    return View(model);
+                                }
+                                else if (!allowedExtensions.Contains(fileExtension))
+                                {
+                                    ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
+                                    return View(model);
+                                }
+                                try
+                                {
+                                    using var stream = new FileStream(filePath, FileMode.Create);
+                                    await file.CopyToAsync(stream);
+                                    _logger.LogInformation($"Файл успешно сохранен: {filePath}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, $"Ошибка при сохранении файла {fileName}");
+                                    ModelState.AddModelError("Attachments", $"Ошибка при сохранении файла {fileName}: {ex.Message}");
+                                }
                             }
                         }
                     }
@@ -562,13 +590,37 @@
                     if (!Directory.Exists(uploadPath))
                         Directory.CreateDirectory(uploadPath);
 
+                    var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
                     foreach (var file in model.Attachments)
                     {
                         if (file.Length > 0)
                         {
-                            var filePath = Path.Combine(uploadPath, Path.GetFileName(file.FileName));
-                            using var stream = new FileStream(filePath, FileMode.Create);
-                            await file.CopyToAsync(stream);
+                            _logger.LogInformation($"Загрузка файла: {file.FileName}, размер: {file.Length}, тип: {file.ContentType}");
+                            var fileName = Path.GetFileName(file.FileName);
+                            var filePath = Path.Combine(uploadPath, fileName);
+                            var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
+                            
+                            if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
+                            {
+                                ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                return View(model);
+                            }
+                            else if (!allowedExtensions.Contains(fileExtension))
+                            {
+                                ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
+                                return View(model);
+                            }
+                            try
+                            {
+                                using var stream = new FileStream(filePath, FileMode.Create);
+                                await file.CopyToAsync(stream);
+                                _logger.LogInformation($"Файл успешно сохранен: {filePath}");
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"Ошибка при сохранении файла {file.FileName}");
+                                ModelState.AddModelError("Attachments", $"Ошибка при сохранении файла {file.FileName}: {ex.Message}");
+                            }
                         }
                     }
                 }
@@ -657,6 +709,50 @@
                 }
             }
 
+            public async Task<IActionResult> UploadAvatar(IFormFile avatarFile)
+            {
+                if (avatarFile == null || avatarFile.Length == 0)
+                {
+                    return BadRequest("Файл не выбран");
+                }
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                var fileExtension = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
+                if (fileExtension == ".gif" || avatarFile.ContentType.ToLowerInvariant() == "image/gif")
+                {
+                    return BadRequest("GIF-изображения не поддерживаются для аватаров. Загрузите JPG или PNG.");
+                }
+                else if (!allowedExtensions.Contains(fileExtension))
+                {
+                    return BadRequest("Недопустимый формат файла. Разрешены только .jpg, .jpeg, .png");
+                }
+
+                var userId = _userManager.GetUserId(User);
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound("Пользователь не найден");
+                }
+
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var fileName = $"{userId}_{DateTime.UtcNow.Ticks}{fileExtension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await avatarFile.CopyToAsync(stream);
+                }
+
+                user.AvatarPath = $"/uploads/avatars/{fileName}";
+                await _userManager.UpdateAsync(user);
+
+                return Ok(new { avatarPath = user.AvatarPath });
+            }
 
     }
 }

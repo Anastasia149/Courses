@@ -7,8 +7,8 @@
     var selectedLessonId = Context.Request.Query["lessonId"].FirstOrDefault();
     int lessonIdInt = 0;
     int.TryParse(selectedLessonId, out lessonIdInt);
-    var selectedLesson = Model.SelectedCourse?.Course.Lessons.FirstOrDefault(l => l.Id == lessonIdInt)
-        ?? Model.SelectedCourse?.Course.Lessons.OrderBy(l => l.Order).FirstOrDefault();
+    var selectedLesson = Model?.SelectedCourse?.Course?.Lessons?.FirstOrDefault(l => l.Id == lessonIdInt)
+        ?? Model?.SelectedCourse?.Course?.Lessons?.OrderBy(l => l.Order).FirstOrDefault();
 }
 
 <div class="teacher-courses-container">
@@ -26,30 +26,33 @@
         <div class="courses-sidebar">
             <div class="card courses-list-card">
                 <div class="card-header">
-                    <h5>Все курсы <span class="badge bg-secondary">@Model.Courses.Count</span></h5>
+                    <h5>Все курсы <span class="badge bg-secondary">@(Model?.Courses?.Count ?? 0)</span></h5>
                 </div>
                 <div class="list-group courses-list">
-                    @foreach (var course in Model.Courses)
+                    @if (Model?.Courses != null)
                     {
-                        <div class="list-group-item course-item @(Model.SelectedCourse?.Course.Id == course.Id ? "active" : "")">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
-                                   class="course-item-content flex-grow-1 text-decoration-none text-dark">
-                                    <h6 class="course-title mb-1">@course.Title</h6>
-                                    <div class="course-meta">
-                                        <span class="badge students-count">
-                                            <i class="fas fa-users"></i> @course.UserCourses.Count
-                                        </span>
-                                        @if (course.Lessons.Any(l => l.Homeworks.Any(h => h.Status == HomeworkStatus.Pending)))
-                                        {
-                                            <span class="badge homeworks-count">
-                                                <i class="fas fa-tasks"></i> @course.Lessons.Sum(l => l.Homeworks.Count(h => h.Status == HomeworkStatus.Pending))
+                        @foreach (var course in Model.Courses)
+                        {
+                            <div class="list-group-item course-item @(Model.SelectedCourse?.Course?.Id == course.Id ? "active" : "")">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
+                                       class="course-item-content flex-grow-1 text-decoration-none text-dark">
+                                        <h6 class="course-title mb-1">@course.Title</h6>
+                                        <div class="course-meta">
+                                            <span class="badge students-count">
+                                                <i class="fas fa-users"></i> @(course.UserCourses?.Count ?? 0)
                                             </span>
-                                        }
-                                    </div>
-                                </a>
+                                            @if (course.Lessons?.Any(l => l.Homeworks?.Any(h => h.Status == HomeworkStatus.Pending) ?? false) ?? false)
+                                            {
+                                                <span class="badge homeworks-count">
+                                                    <i class="fas fa-tasks"></i> @(course.Lessons?.Sum(l => l.Homeworks?.Count(h => h.Status == HomeworkStatus.Pending) ?? 0) ?? 0)
+                                                </span>
+                                            }
+                                        </div>
+                                    </a>
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
                 </div>
             </div>
@@ -57,7 +60,7 @@
 
         <!-- Детали курса -->
         <div class="course-details-container">
-            @if (Model.SelectedCourse != null)
+            @if (Model?.SelectedCourse?.Course != null)
             {
                 <div class="card course-details-card">
                     <div class="card-header">
@@ -133,12 +136,12 @@
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#lessons" type="button">
-                                    Уроки (@Model.SelectedCourse.Course.Lessons.Count)
+                                    Уроки (@(Model.SelectedCourse.Course.Lessons?.Count ?? 0))
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#homeworks" type="button">
-                                    ДЗ на проверку (@Model.SelectedCourse.PendingHomeworks.Count)
+                                    ДЗ на проверку (@(Model.SelectedCourse.PendingHomeworks?.Count ?? 0))
                                 </button>
                             </li>
                         </ul>
@@ -155,7 +158,7 @@
                                             </div>
                                             <div class="stat-content">
                                                 <div class="stat-title">Студентов</div>
-                                                <div class="stat-value">@Model.SelectedCourse.EnrolledStudentsCount</div>
+                                                <div class="stat-value">@(Model.SelectedCourse.EnrolledStudentsCount)</div>
                                             </div>
                                         </div>
                                     </div>
@@ -166,7 +169,7 @@
                                             </div>
                                             <div class="stat-content">
                                                 <div class="stat-title">Уроков</div>
-                                                <div class="stat-value">@Model.SelectedCourse.Course.Lessons.Count</div>
+                                                <div class="stat-value">@(Model.SelectedCourse.Course.Lessons?.Count ?? 0)</div>
                                             </div>
                                         </div>
                                     </div>
@@ -177,7 +180,7 @@
                                             </div>
                                             <div class="stat-content">
                                                 <div class="stat-title">ДЗ на проверку</div>
-                                                <div class="stat-value">@Model.SelectedCourse.PendingHomeworks.Count</div>
+                                                <div class="stat-value">@(Model.SelectedCourse.PendingHomeworks?.Count ?? 0)</div>
                                             </div>
                                         </div>
                                     </div>
@@ -200,7 +203,7 @@
 
                             <!-- Вкладка "Уроки" -->
                             <div class="tab-pane fade" id="lessons" role="tabpanel">
-                                @if (Model.SelectedCourse.Course.Lessons.Any())
+                                @if (Model.SelectedCourse.Course.Lessons?.Any() ?? false)
                                 {
                                     <div class="lessons-list">
                                         @foreach (var lesson in Model.SelectedCourse.Course.Lessons.OrderBy(l => l.Order))
@@ -212,7 +215,7 @@
                                                 </div>
                                                 <div class="lesson-meta">
                                                     <span class="badge bg-light text-dark">
-                                                        <i class="fas fa-file-alt"></i> @lesson.Homeworks.Count работ
+                                                        <i class="fas fa-file-alt"></i> @(lesson.Homeworks?.Count ?? 0) работ
                                                     </span>
                                                     <div class="lesson-actions">
                                                         <a asp-controller="Teacher" asp-action="EditLesson" asp-route-id="@lesson.Id"
@@ -245,7 +248,7 @@
 
                             <!-- Вкладка "Домашние задания" -->
                             <div class="tab-pane fade" id="homeworks" role="tabpanel">
-                                @if (Model.SelectedCourse.PendingHomeworks.Any() || Model.CurrentStatus == HomeworkStatus.Approved)
+                                @if ((Model.SelectedCourse.PendingHomeworks?.Any() ?? false) || Model.CurrentStatus == HomeworkStatus.Approved)
                                 {
                                     <div class="homeworks-list">
                                         <table class="table">
@@ -258,12 +261,12 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var hw in Model.SelectedCourse.PendingHomeworks)
+                                                @foreach (var hw in Model.SelectedCourse.PendingHomeworks ?? Enumerable.Empty<Homework>())
                                                 {
                                                     <tr>
-                                                        <td>@hw.Student.FullName</td>
-                                                        <td>@hw.Lesson.Title</td>
-                                                        <td>@hw.SubmittedAt.ToString("dd.MM.yyyy")</td>
+                                                        <td>@(hw.Student?.FullName ?? "Неизвестный студент")</td>
+                                                        <td>@(hw.Lesson?.Title ?? "Неизвестный урок")</td>
+                                                        <td>@(hw.SubmittedAt.ToString("dd.MM.yyyy"))</td>
                                                         <td>
                                                             <a asp-controller="Teacher"
                                                                asp-action="ReviewHomework"
@@ -271,7 +274,6 @@
                                                                class="btn btn-sm @(hw.Status == HomeworkStatus.Approved ? "btn-info" : "btn-primary")">
                                                                 @(hw.Status == HomeworkStatus.Approved ? "Изменить оценку" : "Проверить")
                                                             </a>
-
                                                         </td>
                                                     </tr>
                                                 }
@@ -344,7 +346,7 @@
                 <form id="addCommentForm" class="mt-3">
                     <input type="hidden" id="parentCommentId" name="parentCommentId" value="" />
                     <div class="mb-2">
-                        <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required></textarea>
+                        <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required maxlength="600"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
                     <button type="button" class="btn btn-secondary btn-sm" id="cancelReply" style="display:none;">Отмена</button>
@@ -356,7 +358,7 @@
 
 @section Scripts {
     <script>
-         // Обработка модального окна удаления
+        // Обработка модального окна удаления
         $('#deleteCourseModal').on('show.bs.modal', function(event) {
             const button = $(event.relatedTarget);
             const courseId = button.data('course-id');
@@ -379,7 +381,7 @@
         });
 
         // Показ модального окна создания урока
-            function showCreateLessonModal(courseId) {
+        function showCreateLessonModal(courseId) {
             $('#modal-course-id').val(courseId);
             $('#createLessonModal').modal('show');
         }
@@ -395,7 +397,7 @@
                 url: actionUrl,
                 method: 'POST',
                 data: $form.serialize(),
-                dataType: 'json', // ОЖИДАЕМ JSON!
+                dataType: 'json',
                 success: function (response) {
                     if (response.success) {
                         $('#createLessonModal').modal('hide');
@@ -427,7 +429,7 @@
             }
         });
 
-        window.lessonIdForComments = @selectedLesson.Id;
+        window.lessonIdForComments = @(selectedLesson?.Id ?? 0);
     </script>
 
     <script src="~/js/lesson-comments-modal.js"></script>

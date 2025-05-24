@@ -20,6 +20,7 @@ namespace Courses.ViewModels
         public string Password { get; set; }
 
         [Required(ErrorMessage = "Требуется подтверждения пароля.")]
+        [StringLength(40, MinimumLength = 8, ErrorMessage = "{0} должен быть длиной {2} и иметь максимальную длину {1} ​​символов.")]
         [DataType(DataType.Password)]
         [Display(Name = "Подтверждение пароля")]
         public string ConfirmPassword { get; set; }

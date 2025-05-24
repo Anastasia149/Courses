@@ -76,8 +76,8 @@ namespace Courses.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка в методе Course");
-                return StatusCode(500, "Произошла ошибка при загрузке данных");
+                _logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РєСѓСЂСЃР°");
+                return StatusCode(500, "РџСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РєСѓСЂСЃР°");
             }
         }
 
@@ -110,49 +110,53 @@ namespace Courses.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
-            // Сохраняем текущий путь для отображения в случае ошибки
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‚РµРєСѓС‰РёР№ Р°РІР°С‚Р°СЂ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
             model.ExistingAvatarPath = user.AvatarPath;
 
-            // Проверка файла аватара
+            // РџСЂРѕРІРµСЂСЏРµРј С„Р°Р№Р» Р°РІР°С‚Р°СЂР°
             if (model.AvatarFile != null && model.AvatarFile.Length > 0)
             {
-                // Проверка размера (5MB максимум)
+                // РџСЂРѕРІРµСЂСЏРµРј СЂР°Р·РјРµСЂ С„Р°Р№Р»Р° (РјР°РєСЃРёРјСѓРј 5MB)
                 if (model.AvatarFile.Length > 5 * 1024 * 1024)
                 {
-                    ModelState.AddModelError("AvatarFile", "Максимальный размер файла - 5MB");
+                    ModelState.AddModelError("AvatarFile", "РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ С„Р°Р№Р»Р° - 5MB");
                 }
 
-                // Проверка расширения
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                // РџСЂРѕРІРµСЂСЏРµРј СЂР°СЃС€РёСЂРµРЅРёРµ С‚РѕР»СЊРєРѕ РґР»СЏ Р°РІР°С‚Р°СЂРѕРІ
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
                 var fileExtension = Path.GetExtension(model.AvatarFile.FileName).ToLowerInvariant();
-                if (!allowedExtensions.Contains(fileExtension))
+                if (fileExtension == ".gif" || model.AvatarFile.ContentType.ToLowerInvariant() == "image/gif")
                 {
-                    ModelState.AddModelError("AvatarFile", "Допустимые форматы: JPG, JPEG, PNG, GIF");
+                    ModelState.AddModelError("AvatarFile", "GIF-РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ РґР»СЏ Р°РІР°С‚Р°СЂРѕРІ. Р—Р°РіСЂСѓР·РёС‚Рµ JPG РёР»Рё PNG.");
+                }
+                else if (!allowedExtensions.Contains(fileExtension))
+                {
+                    ModelState.AddModelError("AvatarFile", "Р Р°Р·СЂРµС€РµРЅС‹ С„РѕСЂРјР°С‚С‹: JPG, JPEG, PNG");
                 }
             }
 
             if (ModelState.IsValid)
             {
-                // Обработка аватара (только если файл был загружен)
+                // РЎРѕС…СЂР°РЅСЏРµРј РЅРѕРІС‹Р№ Р°РІР°С‚Р°СЂ (РµСЃР»Рё Р±С‹Р» Р·Р°РіСЂСѓР¶РµРЅ)
                 if (model.AvatarFile != null && model.AvatarFile.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
 
-                    // Создаём папку если её нет
+                    // РЎРѕР·РґР°С‘Рј РїР°РїРєСѓ, РµСЃР»Рё РµС‘ РЅРµС‚
                     if (!Directory.Exists(uploadsFolder))
                         Directory.CreateDirectory(uploadsFolder);
 
-                    // Уникальное имя файла
+                    // РЈРЅРёРєР°Р»СЊРЅРѕРµ РёРјСЏ С„Р°Р№Р»Р°
                     var uniqueFileName = $"{user.Id}_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(model.AvatarFile.FileName)}";
                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                    // Сохраняем файл
+                    // РЎРѕС…СЂР°РЅСЏРµРј С„Р°Р№Р»
                     using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
                         await model.AvatarFile.CopyToAsync(fileStream);
                     }
 
-                    // Удаляем старый аватар если он существует
+                    // РЈРґР°Р»СЏРµРј СЃС‚Р°СЂС‹Р№ Р°РІР°С‚Р°СЂ, РµСЃР»Рё Р±С‹Р»
                     if (!string.IsNullOrEmpty(user.AvatarPath))
                     {
                         var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
@@ -161,29 +165,29 @@ namespace Courses.Controllers
                             System.IO.File.Delete(oldFilePath);
                     }
 
-                    // Обновляем путь к аватару
+                    // РЎРѕС…СЂР°РЅСЏРµРј РїСѓС‚СЊ Рє РЅРѕРІРѕРјСѓ Р°РІР°С‚Р°СЂСѓ
                     user.AvatarPath = $"/avatars/{uniqueFileName}";
                 }
 
-                // Обновляем телефон
+                // РЎРѕС…СЂР°РЅСЏРµРј С‚РµР»РµС„РѕРЅ
                 user.PhoneNumber = model.PhoneNumber;
 
-                // Сохраняем изменения в базе данных
+                // РћР±РЅРѕРІР»СЏРµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)
                 {
-                    // Если ошибка - добавляем в ModelState
+                    // Р•СЃР»Рё РѕС€РёР±РєР° - РґРѕР±Р°РІР»СЏРµРј РІ ModelState
                     foreach (var error in result.Errors)
                         ModelState.AddModelError(string.Empty, error.Description);
 
                     return View(model);
                 }
 
-                TempData["SuccessMessage"] = "Профиль успешно обновлён!";
+                TempData["SuccessMessage"] = "РџСЂРѕС„РёР»СЊ СѓСЃРїРµС€РЅРѕ РѕР±РЅРѕРІР»С‘РЅ!";
                 return RedirectToAction(nameof(Teacher));
             }
 
-            // Если ModelState невалиден
+            // Р•СЃР»Рё ModelState РЅРµРІР°Р»РёРґРµРЅ
             return View(model);
         }
 
@@ -218,49 +222,53 @@ namespace Courses.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
-            // Сохраняем текущий путь для отображения в случае ошибки
+            // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‚РµРєСѓС‰РёР№ Р°РІР°С‚Р°СЂ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
             model.ExistingAvatarPath = user.AvatarPath;
 
-            // Проверка файла аватара
+            // РџСЂРѕРІРµСЂСЏРµРј С„Р°Р№Р» Р°РІР°С‚Р°СЂР°
             if (model.AvatarFile != null && model.AvatarFile.Length > 0)
             {
-                // Проверка размера (5MB максимум)
+                // РџСЂРѕРІРµСЂСЏРµРј СЂР°Р·РјРµСЂ С„Р°Р№Р»Р° (РјР°РєСЃРёРјСѓРј 5MB)
                 if (model.AvatarFile.Length > 5 * 1024 * 1024)
                 {
-                    ModelState.AddModelError("AvatarFile", "Максимальный размер файла - 5MB");
+                    ModelState.AddModelError("AvatarFile", "РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ С„Р°Р№Р»Р° - 5MB");
                 }
 
-                // Проверка расширения
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                // РџСЂРѕРІРµСЂСЏРµРј СЂР°СЃС€РёСЂРµРЅРёРµ С‚РѕР»СЊРєРѕ РґР»СЏ Р°РІР°С‚Р°СЂРѕРІ
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
                 var fileExtension = Path.GetExtension(model.AvatarFile.FileName).ToLowerInvariant();
-                if (!allowedExtensions.Contains(fileExtension))
+                if (fileExtension == ".gif" || model.AvatarFile.ContentType.ToLowerInvariant() == "image/gif")
                 {
-                    ModelState.AddModelError("AvatarFile", "Допустимые форматы: JPG, JPEG, PNG, GIF");
+                    ModelState.AddModelError("AvatarFile", "GIF-РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ РґР»СЏ Р°РІР°С‚Р°СЂРѕРІ. Р—Р°РіСЂСѓР·РёС‚Рµ JPG РёР»Рё PNG.");
+                }
+                else if (!allowedExtensions.Contains(fileExtension))
+                {
+                    ModelState.AddModelError("AvatarFile", "Р Р°Р·СЂРµС€РµРЅС‹ С„РѕСЂРјР°С‚С‹: JPG, JPEG, PNG");
                 }
             }
 
             if (ModelState.IsValid)
             {
-                // Обработка аватара (только если файл был загружен)
+                // РЎРѕС…СЂР°РЅСЏРµРј РЅРѕРІС‹Р№ Р°РІР°С‚Р°СЂ (РµСЃР»Рё Р±С‹Р» Р·Р°РіСЂСѓР¶РµРЅ)
                 if (model.AvatarFile != null && model.AvatarFile.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
 
-                    // Создаём папку если её нет
+                    // РЎРѕР·РґР°С‘Рј РїР°РїРєСѓ, РµСЃР»Рё РµС‘ РЅРµС‚
                     if (!Directory.Exists(uploadsFolder))
                         Directory.CreateDirectory(uploadsFolder);
 
-                    // Уникальное имя файла
+                    // РЈРЅРёРєР°Р»СЊРЅРѕРµ РёРјСЏ С„Р°Р№Р»Р°
                     var uniqueFileName = $"{user.Id}_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(model.AvatarFile.FileName)}";
                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                    // Сохраняем файл
+                    // РЎРѕС…СЂР°РЅСЏРµРј С„Р°Р№Р»
                     using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
                         await model.AvatarFile.CopyToAsync(fileStream);
                     }
 
-                    // Удаляем старый аватар если он существует
+                    // РЈРґР°Р»СЏРµРј СЃС‚Р°СЂС‹Р№ Р°РІР°С‚Р°СЂ, РµСЃР»Рё Р±С‹Р»
                     if (!string.IsNullOrEmpty(user.AvatarPath))
                     {
                         var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
@@ -269,29 +277,29 @@ namespace Courses.Controllers
                             System.IO.File.Delete(oldFilePath);
                     }
 
-                    // Обновляем путь к аватару
+                    // РЎРѕС…СЂР°РЅСЏРµРј РїСѓС‚СЊ Рє РЅРѕРІРѕРјСѓ Р°РІР°С‚Р°СЂСѓ
                     user.AvatarPath = $"/avatars/{uniqueFileName}";
                 }
 
-                // Обновляем телефон
+                // РЎРѕС…СЂР°РЅСЏРµРј С‚РµР»РµС„РѕРЅ
                 user.PhoneNumber = model.PhoneNumber;
 
-                // Сохраняем изменения в базе данных
+                // РћР±РЅРѕРІР»СЏРµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)
                 {
-                    // Если ошибка - добавляем в ModelState
+                    // Р•СЃР»Рё РѕС€РёР±РєР° - РґРѕР±Р°РІР»СЏРµРј РІ ModelState
                     foreach (var error in result.Errors)
                         ModelState.AddModelError(string.Empty, error.Description);
 
                     return View(model);
                 }
 
-                TempData["SuccessMessage"] = "Профиль успешно обновлён!";
+                TempData["SuccessMessage"] = "РџСЂРѕС„РёР»СЊ СѓСЃРїРµС€РЅРѕ РѕР±РЅРѕРІР»С‘РЅ!";
                 return RedirectToAction(nameof(Student));
             }
 
-            // Если ModelState невалиден
+            // Р•СЃР»Рё ModelState РЅРµРІР°Р»РёРґРµРЅ
             return View(model);
         }
 
