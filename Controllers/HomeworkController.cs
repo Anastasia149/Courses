@@ -84,10 +84,10 @@ namespace Courses.Controllers
             // Обработка файлов
             if (files != null && files.Any())
             {
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "homework");
-                if (!Directory.Exists(uploadsFolder))
+                var homeworkUploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "homeworks", homework.Id.ToString());
+                if (!Directory.Exists(homeworkUploadsFolder))
                 {
-                    Directory.CreateDirectory(uploadsFolder);
+                    Directory.CreateDirectory(homeworkUploadsFolder);
                 }
 
                 foreach (var file in files)
@@ -95,22 +95,20 @@ namespace Courses.Controllers
                     if (file.Length > 0)
                     {
                         var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
+                        var filePath = Path.Combine(homeworkUploadsFolder, uniqueFileName);
                         using (var stream = new FileStream(filePath, FileMode.Create))
                         {
                             await file.CopyToAsync(stream);
                         }
-
+                        var relativePath = $"/uploads/homeworks/{homework.Id}/{uniqueFileName}";
                         var homeworkFile = new HomeworkFile
                         {
                             FileName = file.FileName,
-                            FilePath = uniqueFileName,
+                            FilePath = relativePath,
                             ContentType = file.ContentType,
                             FileSize = file.Length,
                             HomeworkId = homework.Id
                         };
-
                         homework.Files.Add(homeworkFile);
                     }
                 }

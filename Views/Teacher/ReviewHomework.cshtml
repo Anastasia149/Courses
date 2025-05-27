@@ -107,6 +107,39 @@
                 </div>
             </div>
 
+            <!-- Файлы студента -->
+            <div class="files-section mb-4">
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-paperclip me-2"></i>Прикрепленные файлы
+                </h5>
+                <div class="files-content p-3 bg-light rounded">
+                    @if (Model.Homework.Files != null && Model.Homework.Files.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var file in Model.Homework.Files)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-file me-2"></i>
+                                            <span>@file.FileName</span>
+                                        </div>
+                                        <a href="@Url.Action("DownloadFile", "Teacher", new { homeworkId = Model.Homework.Id, fileId = file.Id })" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download"></i> Скачать
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">Студент не прикрепил файлов</div>
+                    }
+                </div>
+            </div>
+
             <!-- Форма проверки -->
             <form asp-controller="Teacher" asp-action="ReviewHomework" asp-route-homeworkId="@Model.Homework.Id" method="post" class="review-form">
                 <input type="hidden" name="homeworkId" value="@Model.Homework.Id" />

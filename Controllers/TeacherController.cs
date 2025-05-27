@@ -143,6 +143,7 @@
                     .Include(h => h.Student)
                     .Include(h => h.Lesson)
                         .ThenInclude(l => l.Course)
+                    .Include(h => h.Files)
                     .FirstOrDefaultAsync(h => h.Id == homeworkId);
 
 
@@ -752,6 +753,59 @@
                 await _userManager.UpdateAsync(user);
 
                 return Ok(new { avatarPath = user.AvatarPath });
+            }
+
+            [HttpGet]
+            public async Task<IActionResult> DownloadFile(int homeworkId, int fileId)
+            {
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+                    
+                    var homework = await _context.Homeworks
+                        .Include(h => h.Lesson)
+                            .ThenInclude(l => l.Course)
+                        .Include(h => h.Files)
+                        .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+                    if (homework == null || homework.Lesson.Course.TeacherId != teacherId)
+                        return NotFound($"Homework not found or access denied. homeworkId={homeworkId}");
+
+                    var file = homework.Files.FirstOrDefault(f => f.Id == fileId);
+                    if (file == null)
+                        return NotFound($"File not found in homework. fileId={fileId}");
+
+                    var filePath = Path.Combine(_environment.WebRootPath, file.FilePath.TrimStart('/'));
+                    
+                    if (!System.IO.File.Exists(filePath))
+                        return NotFound($"File not found on disk: {filePath}");
+
+                    Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{file.FileName}\"");
+                    var mimeType = GetMimeType(Path.GetExtension(file.FileName));
+                    return PhysicalFile(filePath, mimeType, file.FileName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при скачивании файла {fileId} из домашней работы {homeworkId}");
+                    return StatusCode(500, "Произошла ошибка при скачивании файла");
+                }
+            }
+
+            private string GetMimeType(string extension)
+            {
+                return extension.ToLower() switch
+                {
+                    ".pdf" => "application/pdf",
+                    ".doc" => "application/msword",
+                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ".txt" => "text/plain",
+                    ".jpg" => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".zip" => "application/zip",
+                    ".rar" => "application/x-rar-compressed",
+                    _ => "application/octet-stream"
+                };
             }
 
     }

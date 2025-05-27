@@ -39,9 +39,6 @@
                                        class="course-item-content flex-grow-1 text-decoration-none text-dark">
                                         <h6 class="course-title mb-1">@course.Title</h6>
                                         <div class="course-meta">
-                                            <span class="badge students-count">
-                                                <i class="fas fa-users"></i> @(course.UserCourses?.Count ?? 0)
-                                            </span>
                                             @if (course.Lessons?.Any(l => l.Homeworks?.Any(h => h.Status == HomeworkStatus.Pending) ?? false) ?? false)
                                             {
                                                 <span class="badge homeworks-count">
@@ -356,6 +353,23 @@
     </div>
 </div>
 
+<!-- Модальное окно для просмотра файлов студентов -->
+<div class="modal fade" id="studentFilesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Файлы студентов</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentFilesList">
+                    <!-- Здесь будут отображаться файлы -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         // Обработка модального окна удаления
@@ -430,6 +444,40 @@
         });
 
         window.lessonIdForComments = @(selectedLesson?.Id ?? 0);
+
+        $(function() {
+            $('.view-files-btn').on('click', function() {
+                var lessonId = $(this).data('lesson-id');
+                var lessonTitle = $(this).data('lesson-title');
+                $('#studentFilesModal .modal-title').text('Файлы студентов: ' + lessonTitle);
+                
+                $.get('/Teacher/GetStudentFiles', { lessonId: lessonId }, function(files) {
+                    var html = '';
+                    if (files.length === 0) {
+                        html = '<div class="alert alert-info">Нет загруженных файлов</div>';
+                    } else {
+                        html = '<div class="list-group">';
+                        files.forEach(function(file) {
+                            html += `
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${file.studentName}</strong>
+                                            <small class="text-muted ms-2">${new Date(file.submittedAt).toLocaleString()}</small>
+                                        </div>
+                                        <a href="${file.filePath}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                            <i class="fas fa-download"></i> ${file.fileName}
+                                        </a>
+                                    </div>
+                                </div>`;
+                        });
+                        html += '</div>';
+                    }
+                    $('#studentFilesList').html(html);
+                    $('#studentFilesModal').modal('show');
+                });
+            });
+        });
     </script>
 
     <script src="~/js/lesson-comments-modal.js"></script>
