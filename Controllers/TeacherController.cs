@@ -423,7 +423,7 @@
                     var teacherId = _userManager.GetUserId(User);
 
                     // Формируем полное описание из разных полей
-                    var fullDescription = $"{model.ShortDescription}\n\n{model.Description}";
+                    var fullDescription = $"{model.Description}";
 
                     if (!string.IsNullOrWhiteSpace(model.Category))
                     {

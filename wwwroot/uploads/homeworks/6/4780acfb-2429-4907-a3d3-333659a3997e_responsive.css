@@ -1,0 +1,442 @@
+/* Mobile Devices (up to 767px) */
+@media only screen and (max-width: 767px) {
+  /* Header Adjustments */
+  .header {
+    padding: 1rem;
+  }
+  
+  .header-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .king-logo {
+    font-size: 1.2rem;
+    white-space: normal;
+    position: static;
+    transform: none;
+    text-align: left;
+    margin-left: 15px;
+  }
+  
+  .nav-list {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .nav-item {
+    margin: 0;
+  }
+  
+  .register-btn {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+  
+  /* Hero Section */
+  .hero-section {
+    height: auto;
+    min-height: auto;
+    padding: 3rem 1rem;
+    position: relative;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    margin-left: 0;
+  }
+  
+  .hero-text-container {
+    max-width: 100%;
+    margin-left: 0;
+  }
+  
+  .hero-text {
+    font-size: 0.7rem;
+  }
+  
+  /* Cyclists positioning */
+  .cyclist-large-right {
+    position: absolute;
+    right: 10%;
+    top: calc(100% - 250px);
+    width: 35%;
+    max-width: 250px;
+    z-index: 1000;
+  }
+  
+  .cyclist-right {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40%;
+    max-width: 200px;
+    z-index: 2;
+  }
+  
+  .cyclist-right-center {
+    position: absolute;
+    left: 60%;
+    top: 30%;
+    transform: translate(-50%, -50%);
+    width: 23%;
+    max-width: 150px;
+    z-index: 2;
+  }
+  
+  .cyclist-left {
+    position: absolute;
+    left: 15%;
+    bottom: 15%;
+    width: 16%;
+    max-width: 120px;
+    z-index: 2;
+  }
+  
+  .cyclist3-center {
+    width: 100%;
+    display: block;
+    margin-bottom: 0;
+  }
+  
+  /* VERSATILE SPORT label */
+  .versatile-sport-label {
+    position: absolute;
+    top: calc(100% - 700px);
+    left: 10%;
+    font-size: 3rem;
+    z-index: 1000;
+  }
+  
+  /* Register Callout */
+  .register-callout {
+    padding: 3rem 1rem;
+    padding-top: 100px;
+    margin-left: 0;
+  }
+  
+  .register-callout h2 {
+    font-size: 1.8rem;
+  }
+  
+  .register-form {
+    width: 100%;
+  }
+
+  .register-form input[type="text"],
+  .register-form input[type="email"],
+  .register-form input[type="tel"],
+  .register-form select,
+  .register-form button {
+    max-width: 250px;
+  }
+  
+  /* Newsletter Section */
+  .newsletter-section {
+    padding: 2rem 1rem 3rem;
+  }
+  
+  .newsletter-content {
+    max-width: 100%;
+    margin-left: 0;
+    padding-right: 0;
+  }
+  
+  .newsletter-form {
+    width: 100%;
+  }
+  
+  /* Winner Section */
+  .winner-section {
+    padding: 3rem 1rem;
+  }
+  
+  .winner-image-container {
+    width: 100%;
+  }
+  
+  .winner-leonard {
+    font-size: 2.5rem;
+    margin: 0 0 -0.4rem -0.8rem;
+  }
+  
+  .winner-stuart {
+    font-size: 2.5rem;
+    margin: -1.2rem 0 0 0;
+  }
+  
+  .winner-races {
+    font-size: 1.2rem;
+  }
+  
+  /* Fascinating Section */
+  .fascinating-section {
+    padding: 3rem 1rem;
+  }
+  
+  .fascinating-content {
+    max-width: 100%;
+    margin: 2rem 0 0 0;
+  }
+  
+  .fascinating-content h3 {
+    font-size: 2.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  /* Discount Section */
+  .discount-section {
+    padding: 3rem 1rem;
+  }
+  
+  .discount-content {
+    max-width: 100%;
+    margin: 3rem 0 0 0;
+    text-align: center;
+  }
+  
+  .discount-content h4 {
+    font-size: 1.2rem;
+  }
+  
+  .discount-content h2 {
+    font-size: 2.5rem;
+  }
+  
+  .discount-percent {
+    font-size: 2.5rem;
+  }
+  
+  /* Footer */
+  .main-footer {
+    padding: 2rem 1rem;
+  }
+  
+  .footer-left,
+  .footer-right {
+    padding: 0;
+  }
+  
+  .footer-center h2 {
+    font-size: 1.8rem;
+  }
+  
+  .logo-center-section {
+    padding: 3rem 0 10rem 0;
+  }
+  
+  .centered-logo {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Tablets (768px to 1023px) */
+@media only screen and (min-width: 768px) and (max-width: 1023px) {
+  /* Header Adjustments */
+  .header {
+    padding: 1.5rem;
+  }
+  
+  .nav-list {
+    flex-wrap: nowrap;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .nav-item {
+    margin: 0;
+  }
+
+  .register-btn {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Hero Section */
+  .hero-section {
+    padding: 4rem 1.5rem;
+  }
+  
+  .hero-title {
+    font-size: 2.8rem;
+  }
+
+  .hero-text {
+    font-size: 0.9rem;
+  }
+  
+  /* Cyclists positioning */
+  .cyclist-large-right {
+    position: absolute;
+    right: 10%;
+    top: calc(100% - 300px);
+    width: 35%;
+    max-width: 300px;
+    z-index: 1000;
+  }
+  
+  .cyclist-right {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40%;
+    max-width: 300px;
+    z-index: 2;
+  }
+  
+  .cyclist-right-center {
+    position: absolute;
+    left: 60%;
+    top: 30%;
+    transform: translate(-50%, -50%);
+    width: 23%;
+    max-width: 200px;
+    z-index: 2;
+  }
+  
+  .cyclist-left {
+    position: absolute;
+    left: 15%;
+    bottom: 15%;
+    width: 16%;
+    max-width: 160px;
+    z-index: 2;
+  }
+  
+  /* VERSATILE SPORT label */
+  .versatile-sport-label {
+    position: absolute;
+    top: calc(100% - 900px);
+    left: 15%;
+    font-size: 3rem;
+    z-index: 1000;
+  }
+  
+  /* Register Callout */
+  .register-callout {
+    padding: 4rem 1.5rem;
+    padding-top: 120px;
+    margin-left: 2%;
+  }
+  
+  .register-callout h2 {
+    font-size: 2.2rem;
+  }
+  
+  .register-form {
+    width: 80%;
+  }
+
+  .register-form input[type="text"],
+  .register-form input[type="email"],
+  .register-form input[type="tel"],
+  .register-form select,
+  .register-form button {
+    max-width: 300px;
+  }
+  
+  /* Newsletter Section */
+  .newsletter-section {
+    padding: 3rem 1.5rem 4rem;
+  }
+  
+  .newsletter-content {
+    max-width: 60%;
+  }
+  
+  /* Winner Section */
+  .winner-section {
+    padding: 4rem 1.5rem;
+  }
+  
+  .winner-leonard {
+    font-size: 3.2rem;
+  }
+  
+  .winner-stuart {
+    font-size: 3.2rem;
+  }
+  
+  .winner-races {
+    font-size: 1.3rem;
+  }
+  
+  /* Fascinating Section */
+  .fascinating-section {
+    padding: 4rem 1.5rem;
+  }
+  
+  .fascinating-content {
+    max-width: 50%;
+    margin: 2.5rem 0 0 2rem;
+  }
+  
+  .fascinating-content h3 {
+    font-size: 3rem;
+  }
+  
+  /* Discount Section */
+  .discount-section {
+    padding: 4rem 1.5rem;
+  }
+  
+  .discount-content {
+    max-width: 45%;
+    margin: 4rem 0 0 25%;
+  }
+  
+  .discount-content h4 {
+    font-size: 1.4rem;
+  }
+  
+  .discount-content h2 {
+    font-size: 3rem;
+  }
+  
+  .discount-percent {
+    font-size: 2.8rem;
+  }
+  
+  /* Footer */
+  .main-footer {
+    padding: 3rem 1.5rem;
+  }
+  
+  .footer-center h2 {
+    font-size: 2.2rem;
+  }
+  
+  .logo-center-section {
+    padding: 4rem 0 15rem 0;
+  }
+  
+  .centered-logo {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+/* Small Desktops (1024px to 1199px) */
+@media only screen and (min-width: 1024px) and (max-width: 1199px) {
+  /* Adjust container widths */
+  .hero-container,
+  .register-container,
+  .info-grid,
+  .features-section,
+  .text-columns-section,
+  .footer-content {
+    max-width: 1000px;
+  }
+  
+  /* Promo Banner */
+  .promo-image {
+    width: 35%;
+  }
+}

@@ -20,8 +20,5 @@ namespace Courses.ViewModels
         [StringLength(20, ErrorMessage = "Не более 20 символов")]
         public string DifficultyLevel { get; set; }
 
-        [Display(Name = "Краткое описание")]
-        [StringLength(200, ErrorMessage = "Не более 200 символов")]
-        public string ShortDescription { get; set; }
     }
 }
