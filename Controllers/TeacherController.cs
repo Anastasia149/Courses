@@ -172,6 +172,7 @@
             }
         }
 
+
         // Проверка ДЗ (GET)
         public async Task<IActionResult> ReviewHomework(int homeworkId, string returnUrl = null)
         {
@@ -735,6 +736,33 @@
                             Directory.Delete(lessonDir, true); // рекурсивно
                         }
                     }
+
+                    // Удаляем связанные сущности, которые могут блокировать удаление
+                    var lessonIds = course.Lessons.Select(l => l.Id).ToList();
+                    var homeworkIds = course.Lessons.SelectMany(l => l.Homeworks).Select(h => h.Id).ToList();
+
+                    var homeworkFiles = _context.HomeworkFiles.Where(f => homeworkIds.Contains(f.HomeworkId));
+                    var homeworks = _context.Homeworks.Where(h => homeworkIds.Contains(h.Id));
+                    var lessonComments = _context.LessonComments.Where(c => lessonIds.Contains(c.LessonId));
+                    var userCourses = _context.UserCourses.Where(uc => uc.CourseId == id);
+                    var reviews = _context.Reviews.Where(r => r.CourseId == id);
+                    var categories = _context.Categories.Where(cat => cat.CourseId == id);
+                    var modules = _context.Modules.Where(m => m.CourseId == id);
+                    var certificates = _context.Certificates.Where(c => c.CourseId == id);
+                    var notifications = _context.Notifications
+                        .Where(n => n.CourseId == id || (n.LessonId != null && lessonIds.Contains(n.LessonId.Value)) || (n.HomeworkId != null && homeworkIds.Contains(n.HomeworkId.Value)));
+                    var lessons = _context.Lessons.Where(l => lessonIds.Contains(l.Id));
+
+                    _context.HomeworkFiles.RemoveRange(homeworkFiles);
+                    _context.Homeworks.RemoveRange(homeworks);
+                    _context.LessonComments.RemoveRange(lessonComments);
+                    _context.Notifications.RemoveRange(notifications);
+                    _context.UserCourses.RemoveRange(userCourses);
+                    _context.Reviews.RemoveRange(reviews);
+                    _context.Categories.RemoveRange(categories);
+                    _context.Modules.RemoveRange(modules);
+                    _context.Certificates.RemoveRange(certificates);
+                    _context.Lessons.RemoveRange(lessons);
 
                     _context.Courses.Remove(course);
                     await _context.SaveChangesAsync();

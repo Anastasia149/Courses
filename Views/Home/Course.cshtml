@@ -26,7 +26,7 @@
         <div class="courses-sidebar">
             <div class="card courses-list-card">
                 <div class="card-header">
-                    <h5>Все курсы <span class="badge bg-secondary">@(Model?.Courses?.Count ?? 0)</span></h5>
+                    <h5>Все курсы</h5>
                 </div>
                 <div class="list-group courses-list">
                     @if (Model?.Courses != null)
@@ -123,17 +123,17 @@
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#lessons" type="button">
-                                    Уроки (@(Model.SelectedCourse.Course.Lessons?.Count ?? 0))
+                                    Уроки
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#homeworks" type="button">
-                                    Сданные работы (@(Model.SelectedCourse.PendingHomeworks?.Count ?? 0))
+                                    Сданные работы
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#students" type="button">
-                                    Студенты (@(Model.SelectedCourse.EnrolledStudents?.Count ?? 0))
+                                    Студенты
                                 </button>
                             </li>
                         </ul>
@@ -180,14 +180,38 @@
 
                                 <div class="course-description mt-4">
                                     <h5>Описание курса</h5>
-                                    <div class="description-content">
-                                        @if (!string.IsNullOrEmpty(Model.SelectedCourse.Course.Description))
+                                    <div class="description-content mb-3">
+                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.Description))
                                         {
                                             @Html.Raw(Model.SelectedCourse.Course.Description)
                                         }
                                         else
                                         {
                                             <div class="text-muted">Описание отсутствует</div>
+                                        }
+                                    </div>
+
+                                    <h5 class="fw-semibold">Категория</h5>
+                                    <div class="mb-2">
+                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.Category))
+                                        {
+                                            @Model.SelectedCourse.Course.Category
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Не указана</span>
+                                        }
+                                    </div>
+
+                                    <h5 class="fw-semibold">Уровень сложности</h5>
+                                    <div>
+                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.DifficultyLevel))
+                                        {
+                                            @Model.SelectedCourse.Course.DifficultyLevel
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Не указан</span>
                                         }
                                     </div>
                                 </div>
@@ -423,17 +447,6 @@
             const modal = $(this);
             modal.find('#courseTitleToDelete').text(courseTitle);
             modal.find('#deleteCourseForm').attr('action', '/Teacher/DeleteCourse/' + courseId);
-        });
-
-        // После удаления - обновляем страницу
-        $('#deleteCourseForm').submit(function(e) {
-            e.preventDefault();
-            $.post($(this).attr('action'), $(this).serialize(), function() {
-                $('#deleteCourseModal').modal('hide');
-                window.location.href = '@Url.Action("Course", "Home")';
-            }).fail(function() {
-                alert('Ошибка при удалении курса');
-            });
         });
 
         // Показ модального окна создания урока

@@ -65,6 +65,27 @@ namespace Courses.Controllers
             return View(new StudentCoursesViewModel { EnrolledCourses = enrolledCourses });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LeaveCourse(int courseId)
+        {
+            var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var link = await _context.UserCourses
+                .FirstOrDefaultAsync(uc => uc.CourseId == courseId && uc.UserId == userId);
+
+            if (link == null)
+            {
+                TempData["ErrorMessage"] = "Вы не записаны на этот курс.";
+                return RedirectToAction(nameof(Course));
+            }
+
+            _context.UserCourses.Remove(link);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Вы покинули курс.";
+            return RedirectToAction(nameof(Course));
+        }
+
         public async Task<IActionResult> CourseDetails(int id, int? lessonId = null)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);

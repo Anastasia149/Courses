@@ -32,9 +32,18 @@
                                 }
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn btn-primary">
-                                    Перейти к курсу
-                                </a>
+                                <div class="d-flex gap-2">
+                                    <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn btn-primary btn-sm">
+                                        Перейти к курсу
+                                    </a>
+                                    <form asp-action="LeaveCourse" method="post" onsubmit="return confirm('Покинуть этот курс?');" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="courseId" value="@course.CourseId" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            Покинуть курс
+                                        </button>
+                                    </form>
+                                </div>
                                 <small class="text-muted">
                                     Записан: @course.EnrolledAt.ToString("dd.MM.yyyy")
                                 </small>
