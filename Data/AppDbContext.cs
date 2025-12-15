@@ -19,6 +19,9 @@ namespace Courses.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<LessonComment> LessonComments { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
+        public DbSet<Module> Modules { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+        public DbSet<Category> Categories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -78,6 +81,30 @@ namespace Courses.Data
                 .HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.UserId);
+
+            // Настройка связи между Course и Module
+            builder.Entity<Module>()
+                .HasOne(m => m.Course)
+                .WithMany(c => c.Modules)
+                .HasForeignKey(m => m.CourseId);
+
+            // Настройка связи между Course и Review
+            builder.Entity<Review>()
+                .HasOne(r => r.Course)
+                .WithMany(c => c.Reviews)
+                .HasForeignKey(r => r.CourseId);
+
+            // Настройка связи между User и Review
+            builder.Entity<Review>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId);
+
+            // Настройка связи между Course и Category
+            builder.Entity<Category>()
+                .HasOne(c => c.Course)
+                .WithMany(c => c.Categories)
+                .HasForeignKey(c => c.CourseId);
         }
     }
 }

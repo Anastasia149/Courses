@@ -50,23 +50,7 @@
                 var model = new TeacherCoursesViewModel
                 {
                     Courses = courses ?? new List<Course>(),
-                    SelectedCourse = courses.Any() ?
-                        new CourseDetailsViewModel
-                        {
-                            Course = courses.First(),
-                            EnrolledStudentsCount = await _context.UserCourses
-                                .CountAsync(uc => uc.CourseId == courses.First().Id),
-                            PendingHomeworks = courses.First().Lessons?
-                                .SelectMany(l => l.Homeworks ?? Enumerable.Empty<Homework>())
-                                .Where(h => h.Status == HomeworkStatus.Pending)
-                                .ToList() ?? new List<Homework>()
-                        }
-                        : new CourseDetailsViewModel
-                        {
-                            Course = new Course { Lessons = new List<Lesson>() },
-                            EnrolledStudentsCount = 0,
-                            PendingHomeworks = new List<Homework>()
-                        }
+                    SelectedCourse = null // не загружаем детали, пока пользователь не выберет курс
                 };
 
                 return View("~/Views/Home/Course.cshtml", model);
@@ -75,6 +59,45 @@
             {
                 _logger.LogError(ex, "Ошибка при загрузке курсов преподавателя");
                 return StatusCode(500, "Произошла ошибка при загрузке данных");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveStudentFromCourse(int courseId, string userId)
+        {
+            try
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                var course = await _context.Courses
+                    .FirstOrDefaultAsync(c => c.Id == courseId && c.TeacherId == teacherId);
+
+                if (course == null)
+                {
+                    return NotFound("Курс не найден или доступ запрещен");
+                }
+
+                var userCourse = await _context.UserCourses
+                    .FirstOrDefaultAsync(uc => uc.CourseId == courseId && uc.UserId == userId);
+
+                if (userCourse == null)
+                {
+                    TempData["ErrorMessage"] = "Пользователь не найден в курсе";
+                    return RedirectToAction(nameof(CourseDetails), new { id = courseId });
+                }
+
+                _context.UserCourses.Remove(userCourse);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Пользователь удален из курса";
+                return RedirectToAction(nameof(CourseDetails), new { id = courseId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при удалении пользователя {userId} из курса {courseId}");
+                TempData["ErrorMessage"] = "Произошла ошибка при удалении пользователя из курса";
+                return RedirectToAction(nameof(CourseDetails), new { id = courseId });
             }
         }
 
@@ -103,10 +126,28 @@
                 }
 
                 // Фильтрация работ по статусу
-                var homeworks = selectedCourse.Lessons
-                    .SelectMany(l => l.Homeworks)
-                    .Where(h => status == null || h.Status == status)
-                    .ToList();
+                var homeworksQuery = selectedCourse.Lessons
+                    .SelectMany(l => l.Homeworks);
+
+                List<Homework> homeworks;
+                if (status == null || status == HomeworkStatus.Pending)
+                {
+                    // Вкладка "Сданные": показываем ожидающие и уже проверенные
+                    homeworks = homeworksQuery
+                        .Where(h => h.Status == HomeworkStatus.Pending || h.Status == HomeworkStatus.Approved)
+                        .ToList();
+                }
+                else
+                {
+                    homeworks = homeworksQuery
+                        .Where(h => h.Status == status)
+                        .ToList();
+                }
+
+                var enrolledUsers = await _context.UserCourses
+                    .Include(uc => uc.User)
+                    .Where(uc => uc.CourseId == id)
+                    .ToListAsync();
 
                 var model = new TeacherCoursesViewModel
                 {
@@ -116,8 +157,8 @@
                     {
                         Course = selectedCourse,
                         PendingHomeworks = homeworks,
-                        EnrolledStudentsCount = await _context.UserCourses
-                    .CountAsync(uc => uc.CourseId == id),
+                        EnrolledStudentsCount = enrolledUsers.Count,
+                        EnrolledStudents = enrolledUsers.Select(uc => uc.User).ToList(),
                         CurrentStatus = status // Сохраняем текущий статус фильтрации
                     }
                 };
@@ -149,7 +190,7 @@
 
                 if (homework == null)
                 {
-                    return NotFound("Домашнее задание не найдено или у вас нет доступа.");
+                    return NotFound("Сданная работа не найдено или у вас нет доступа.");
                 }
 
                 // ✅ К этому моменту Lesson и Course гарантированно загружены
@@ -157,7 +198,7 @@
                 ViewBag.ReturnUrl = returnUrl ?? Url.Action(nameof(CourseDetails), new
                 {
                     id = homework.Lesson.Course.Id,
-                    status = homework.Status == HomeworkStatus.Approved ? "Approved" : "Pending"
+                    status = "Pending"
                 });
 
                 return View(new ReviewHomeworkViewModel
@@ -169,7 +210,7 @@
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Ошибка при загрузке ДЗ {homeworkId}");
+                _logger.LogError(ex, $"Ошибка при загрузке работы {homeworkId}");
                 return StatusCode(500, "Произошла ошибка при загрузке работы");
             }
         }
@@ -225,8 +266,8 @@
 
                     await _notificationService.CreateNotificationAsync(
                         homework.StudentId,
-                        "Домашнее задание проверено",
-                        $"Ваше домашнее задание по уроку \"{homework.Lesson.Title}\" было проверено",
+                        "Работа проверена",
+                        $"Ваша работа по уроку \"{homework.Lesson.Title}\" была проверена",
                         NotificationType.HomeworkGraded
                     );
 
@@ -248,7 +289,7 @@
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Ошибка при проверке ДЗ {homeworkId}");
+                    _logger.LogError(ex, $"Ошибка при проверке работы {homeworkId}");
                     ModelState.AddModelError("", "Произошла ошибка при сохранении проверки");
                     ViewBag.ReturnUrl = returnUrl;
                     return View(model);

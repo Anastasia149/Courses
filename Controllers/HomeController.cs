@@ -51,26 +51,9 @@ namespace Courses.Controllers
 
                 var model = new TeacherCoursesViewModel
                 {
-                    Courses = courses
+                    Courses = courses,
+                    SelectedCourse = null // не выбираем курс по умолчанию, ждём выбор пользователя
                 };
-
-                if (courses.Any())
-                {
-                    var firstCourse = courses.First();
-
-                    model.SelectedCourse = new CourseDetailsViewModel
-                    {
-                        Course = firstCourse,
-                        EnrolledStudentsCount = await _context.UserCourses
-                            .CountAsync(uc => uc.CourseId == firstCourse.Id),
-                        PendingHomeworks = await _context.Homeworks
-                            .Include(h => h.Student)
-                            .Include(h => h.Lesson)
-                            .Where(h => h.Lesson.CourseId == firstCourse.Id &&
-                                       h.Status == HomeworkStatus.Pending)
-                            .ToListAsync()
-                    };
-                }
 
                 return View(model);
             }

@@ -33,8 +33,8 @@
                 <li class="breadcrumb-item">
                     <a asp-controller="Teacher" asp-action="CourseDetails"
                        asp-route-id="@courseId"
-                       asp-route-status="@(isApproved ? "Approved" : "Pending")">
-                        @(isApproved ? "Проверенные работы" : "Работы на проверке")
+                       asp-route-status="Pending">
+                        Сданные работы
                     </a>
                 </li>
             }
@@ -143,7 +143,7 @@
             <!-- Форма проверки -->
             <form asp-controller="Teacher" asp-action="ReviewHomework" asp-route-homeworkId="@Model.Homework.Id" method="post" class="review-form">
                 <input type="hidden" name="homeworkId" value="@Model.Homework.Id" />
-                <input type="hidden" name="returnUrl" value="@Url.Action("CourseDetails", new { id = Model.Homework.Lesson.Course.Id, status = isApproved ? "Approved" : "Pending" })" />
+                <input type="hidden" name="returnUrl" value="@Url.Action("CourseDetails", new { id = Model.Homework.Lesson.Course.Id, status = "Pending" })" />
 
                 <h5 class="border-bottom pb-2 mb-3">
                     <i class="fas fa-check-circle me-2"></i>Оценка работы
