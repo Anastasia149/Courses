@@ -34,6 +34,18 @@
                     <span asp-validation-for="Content" class="text-danger"></span>
                 </div>
 
+                <div class="mb-3">
+                    <label asp-for="ModuleId" class="form-label"></label>
+                    <select asp-for="ModuleId" asp-items="Model.Modules" class="form-select">
+                        <option value="">Без модуля</option>
+                    </select>
+                    <div class="mt-2">
+                        <a class="btn btn-link p-0" asp-action="CreateModule" asp-route-courseId="@Model.CourseId">
+                            + Создать модуль
+                        </a>
+                    </div>
+                </div>
+
                 <div class="mb-4">
                     <label asp-for="Attachments" class="form-label"></label>
                     <input type="file" name="Attachments" class="form-control" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />

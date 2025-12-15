@@ -45,7 +45,22 @@ namespace Courses.Data
             builder.Entity<Lesson>()
                 .HasOne(l => l.Course)
                 .WithMany(c => c.Lessons)
-                .HasForeignKey(l => l.CourseId);
+                .HasForeignKey(l => l.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Настройка связи между Lesson и Module (опционально)
+            builder.Entity<Lesson>()
+                .HasOne(l => l.Module)
+                .WithMany(m => m.Lessons)
+                .HasForeignKey(l => l.ModuleId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Настройка связи Course -> Module
+            builder.Entity<Module>()
+                .HasOne(m => m.Course)
+                .WithMany(c => c.Modules)
+                .HasForeignKey(m => m.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Настройка связи между Lesson и Homework
             builder.Entity<Homework>()

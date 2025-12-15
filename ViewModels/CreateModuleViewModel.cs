@@ -1,12 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Courses.Models
+namespace Courses.ViewModels
 {
-    public class Module
+    public class CreateModuleViewModel
     {
-        public int Id { get; set; }
-
-        [Required]
         public int CourseId { get; set; }
 
         [Required(ErrorMessage = "Название обязательно")]
@@ -16,13 +13,9 @@ namespace Courses.Models
         [DataType(DataType.MultilineText)]
         public string? Description { get; set; }
 
-        public int OrderNumber { get; set; } // Порядковый номер
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // Связи
-        public Course Course { get; set; }
-        public List<Lesson> Lessons { get; set; } = new();
+        [Display(Name = "Порядок")]
+        [Range(1, 1000, ErrorMessage = "Порядок должен быть от 1 до 1000")]
+        public int OrderNumber { get; set; } = 1;
     }
 }
 

@@ -36,6 +36,13 @@
                     <span asp-validation-for="Content" class="text-danger"></span>
                 </div>
 
+                <div class="mb-3">
+                    <label asp-for="ModuleId" class="form-label">Модуль</label>
+                    <select asp-for="ModuleId" asp-items="Model.Modules" class="form-select">
+                        <option value="">Без модуля</option>
+                    </select>
+                </div>
+
                 <div class="mb-4">
                     <label class="form-label">Прикрепить дополнительные материалы</label>
                     <input type="file" name="Attachments" multiple class="form-control" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />

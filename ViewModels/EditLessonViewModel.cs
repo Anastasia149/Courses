@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -21,5 +22,10 @@ namespace Courses.ViewModels
         public List<IFormFile> Attachments { get; set; } = new();
 
         public List<LessonFileViewModel> ExistingFiles { get; set; } = new();
+
+        [Display(Name = "Модуль")]
+        public int? ModuleId { get; set; }
+
+        public IEnumerable<SelectListItem> Modules { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 }

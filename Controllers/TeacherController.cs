@@ -4,6 +4,7 @@
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Identity;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.Rendering;
     using Microsoft.EntityFrameworkCore;
     using Courses.Services; 
 
@@ -62,6 +63,43 @@
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CreateModule(int courseId)
+        {
+            var teacherId = _userManager.GetUserId(User);
+            var courseExists = await _context.Courses.AnyAsync(c => c.Id == courseId && c.TeacherId == teacherId);
+            if (!courseExists) return NotFound();
+            return View(new CreateModuleViewModel { CourseId = courseId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateModule(CreateModuleViewModel model)
+        {
+            var teacherId = _userManager.GetUserId(User);
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == model.CourseId && c.TeacherId == teacherId);
+            if (course == null) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var module = new Module
+            {
+                CourseId = model.CourseId,
+                Title = model.Title,
+                Description = model.Description,
+                OrderNumber = model.OrderNumber
+            };
+
+            _context.Modules.Add(module);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Модуль создан";
+            return RedirectToAction(nameof(AddLesson), new { courseId = model.CourseId });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveStudentFromCourse(int courseId, string userId)
@@ -110,14 +148,18 @@
 
                 var courses = await _context.Courses
                     .Include(c => c.Lessons)
-                    .ThenInclude(l => l.Homeworks)
+                        .ThenInclude(l => l.Module)
+                    .Include(c => c.Lessons)
+                        .ThenInclude(l => l.Homeworks)
                     .Where(c => c.TeacherId == teacherId)
                     .ToListAsync();
 
                 var selectedCourse = await _context.Courses
                     .Include(c => c.Lessons)
-                    .ThenInclude(l => l.Homeworks)
-                    .ThenInclude(h => h.Student)
+                        .ThenInclude(l => l.Module)
+                    .Include(c => c.Lessons)
+                        .ThenInclude(l => l.Homeworks)
+                            .ThenInclude(h => h.Student)
                     .FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == teacherId);
 
                 if (selectedCourse == null)
@@ -312,7 +354,17 @@
                         return NotFound();
                     }
 
-                    return View(new AddLessonViewModel { CourseId = courseId });
+                    var modules = await _context.Modules
+                        .Where(m => m.CourseId == courseId)
+                        .OrderBy(m => m.OrderNumber)
+                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                        .ToListAsync();
+
+                    return View(new AddLessonViewModel
+                    {
+                        CourseId = courseId,
+                        Modules = modules
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -329,6 +381,12 @@
                 {
                     if (!ModelState.IsValid)
                     {
+                        // подгружаем модули снова при ошибках
+                        model.Modules = await _context.Modules
+                            .Where(m => m.CourseId == model.CourseId)
+                            .OrderBy(m => m.OrderNumber)
+                            .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                            .ToListAsync();
                         _logger.LogWarning("ModelState невалиден при создании урока");
                         foreach (var kvp in ModelState)
                         {
@@ -356,6 +414,7 @@
                         Order = model.Order,
                         Content = model.Content,
                         CourseId = model.CourseId,
+                        ModuleId = model.ModuleId,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -464,23 +523,12 @@
                 {
                     var teacherId = _userManager.GetUserId(User);
 
-                    // Формируем полное описание из разных полей
-                    var fullDescription = $"{model.Description}";
-
-                    if (!string.IsNullOrWhiteSpace(model.Category))
-                    {
-                        fullDescription += $"\n\nКатегория: {model.Category}";
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(model.DifficultyLevel))
-                    {
-                        fullDescription += $"\nУровень сложности: {model.DifficultyLevel}";
-                    }
-
                     var course = new Course
                     {
                         Title = model.Title,
-                        Description = fullDescription,
+                        Description = model.Description,
+                        Category = model.Category,
+                        DifficultyLevel = model.DifficultyLevel,
                         TeacherId = teacherId,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -597,8 +645,15 @@
                     Order = lesson.Order,
                     Content = lesson.Content,
                     CourseId = lesson.CourseId,
-                    ExistingFiles = GetLessonFiles(lesson.Id)
+                    ExistingFiles = GetLessonFiles(lesson.Id),
+                    ModuleId = lesson.ModuleId
                 };
+
+                model.Modules = await _context.Modules
+                    .Where(m => m.CourseId == lesson.CourseId)
+                    .OrderBy(m => m.OrderNumber)
+                    .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                    .ToListAsync();
 
                 return View(model);
             }
@@ -611,6 +666,11 @@
                 if (!ModelState.IsValid)
                 {
                     model.ExistingFiles = GetLessonFiles(model.Id);
+                    model.Modules = await _context.Modules
+                        .Where(m => m.CourseId == model.CourseId)
+                        .OrderBy(m => m.OrderNumber)
+                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                        .ToListAsync();
                     return View(model);
                 }
 
@@ -624,6 +684,7 @@
                 lesson.Title = model.Title;
                 lesson.Order = model.Order;
                 lesson.Content = model.Content;
+                lesson.ModuleId = model.ModuleId;
 
                 // Загрузка файлов
                 if (model.Attachments != null && model.Attachments.Any())
@@ -673,6 +734,77 @@
                 TempData["SuccessMessage"] = "Урок успешно обновлён!";
                 return RedirectToAction(nameof(CourseDetails), new { id = lesson.CourseId });
             }
+
+        [HttpGet]
+        public async Task<IActionResult> AddModule(int courseId)
+        {
+            var teacherId = _userManager.GetUserId(User);
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == courseId && c.TeacherId == teacherId);
+            if (course == null)
+            {
+                return NotFound();
+            }
+
+            return View(new CreateModuleViewModel { CourseId = courseId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddModule(CreateModuleViewModel model)
+        {
+            var teacherId = _userManager.GetUserId(User);
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == model.CourseId && c.TeacherId == teacherId);
+            if (course == null)
+            {
+                return NotFound();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var module = new Module
+            {
+                CourseId = model.CourseId,
+                Title = model.Title,
+                Description = model.Description,
+                OrderNumber = model.OrderNumber,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Modules.Add(module);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Модуль добавлен";
+            return RedirectToAction(nameof(CourseDetails), new { id = model.CourseId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteModule(int id)
+        {
+            var teacherId = _userManager.GetUserId(User);
+            var module = await _context.Modules
+                .Include(m => m.Course)
+                .Include(m => m.Lessons)
+                .FirstOrDefaultAsync(m => m.Id == id && m.Course.TeacherId == teacherId);
+
+            if (module == null)
+                return NotFound();
+
+            // Обнуляем ModuleId у уроков
+            foreach (var lesson in module.Lessons)
+            {
+                lesson.ModuleId = null;
+            }
+
+            _context.Modules.Remove(module);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Модуль удалён";
+            return RedirectToAction(nameof(CourseDetails), new { id = module.CourseId });
+        }
 
             [HttpGet]
             public IActionResult DeleteLessonFile(int lessonId, string fileName)
