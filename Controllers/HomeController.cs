@@ -25,9 +25,23 @@ namespace Courses.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            // Получаем популярные курсы (по количеству студентов)
+            var popularCourses = await _context.Courses
+                .Include(c => c.Teacher)
+                .Include(c => c.UserCourses)
+                .Include(c => c.Reviews)
+                .OrderByDescending(c => c.UserCourses.Count)
+                .Take(3)
+                .ToListAsync();
+
+            var model = new HomeIndexViewModel
+            {
+                PopularCourses = popularCourses
+            };
+
+            return View(model);
         }
 
         [Authorize]

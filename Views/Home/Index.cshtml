@@ -1,109 +1,526 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model Courses.ViewModels.HomeIndexViewModel
+@{
+    ViewData["Title"] = "Главная";
     Layout = "~/Views/Shared/_HeaderLayout.cshtml";
-
 }
 
-<div class="hero-section">
-    <div class="hero-content">
-        <h1 class="hero-title">Платформа Courses для обучения и запуска ваших курсов</h1>
-
-        <p class="hero-subtitle">
-            Создавайте онлайн-курсы, собирайте базу, принимайте оплаты через Get Модуль, управляйте процессами легко и быстро
-        </p>
-
-        <hr class="hero-divider">
-
-        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-            @if (!User.Identity.IsAuthenticated)
-            {
-                <a href="../Account/Register" class="btn hero-btn hero-btn-outline">
-                    Создать курс
-                </a>
-
-                <a href="../Account/Register" class="btn hero-btn hero-btn-outline">
-                    Присоединиться к курсу
-                </a>
-            }
-            else if (User.IsInRole("Teacher"))
-            {
-                <a asp-controller="Home" asp-action="Teacher" class="btn hero-btn hero-btn-outline">
-                    Создать курс
-                </a>
-            }
-            else if (User.IsInRole("Student"))
-            {
-                <a asp-controller="Home" asp-action="Student" class="btn hero-btn hero-btn-outline">
-                    Присоединиться к курсу
-                </a>
-            }
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-content text-center">
+            <h1 class="hero-title">Раскройте свой потенциал с экспертными курсами</h1>
+            <p class="hero-subtitle">
+                Присоединяйтесь к тысячам учащихся по всему миру. Получите доступ к качественным курсам, учитесь в своем темпе и достигайте своих целей с нашей комплексной платформой обучения.
+            </p>
+            <div class="hero-buttons">
+                @if (!User.Identity.IsAuthenticated)
+                {
+                    <a href="../Account/Register" class="btn btn-primary btn-hero">
+                        <i class="fas fa-book me-2"></i>Начать обучение →
+                    </a>
+                    <a href="../Account/Register" class="btn btn-outline-hero">
+                        Создать курс →
+                    </a>
+                }
+                else if (User.IsInRole("Student"))
+                {
+                    <a asp-controller="Student" asp-action="Course" class="btn btn-primary btn-hero">
+                        <i class="fas fa-book me-2"></i>Начать обучение →
+                    </a>
+                }
+                else if (User.IsInRole("Teacher"))
+                {
+                    <a asp-controller="Teacher" asp-action="CreateCourse" class="btn btn-outline-hero">
+                        Создать курс →
+                    </a>
+                    <a asp-controller="Home" asp-action="Course" class="btn btn-primary btn-hero">
+                        <i class="fas fa-book me-2"></i>Мои курсы →
+                    </a>
+                }
+            </div>
         </div>
     </div>
-</div>
+</section>
 
-<section class="stats-section py-5">
+<!-- Why Choose Section -->
+<section class="why-choose-section py-5">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="display-4 fw-bold">70% онлайн-курсов по всему миру работает на Courses</h2>
+            <h2 class="section-title">Почему выбирают нас</h2>
+            <p class="section-subtitle">Всё, что нужно для успеха в вашем учебном путешествии</p>
         </div>
-
         <div class="row g-4">
-            <!-- Статистика 1 -->
             <div class="col-md-6 col-lg-3">
-                <div class="stat-card h-100 p-4 bg-light rounded-3">
-                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">168 млрд руб.</h3>
-                    <p class="stat-description">совокупный доход онлайн-школ на Courses<br>за 2024 год</p>
+                <div class="feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <h3 class="feature-title">Качественный контент</h3>
+                    <p class="feature-description">Учитесь у экспертов отрасли с профессионально созданными видеокурсами</p>
                 </div>
             </div>
-
-            <!-- Статистика 2 -->
             <div class="col-md-6 col-lg-3">
-                <div class="stat-card h-100 p-4 bg-light rounded-3">
-                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">От 3800 руб. в месяц</h3>
-                    <p class="stat-description">Стоимость аренды сервиса Courses при оплате<br>за полгода</p>
+                <div class="feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="feature-title">Учитесь в своем темпе</h3>
+                    <p class="feature-description">Занимайтесь в любое время, в любом месте с пожизненным доступом к материалам курса</p>
                 </div>
             </div>
-
-            <!-- Статистика 3 -->
             <div class="col-md-6 col-lg-3">
-                <div class="stat-card h-100 p-4 bg-light rounded-3">
-                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">19 000+ клиентов</h3>
-                    <p class="stat-description">в настоящий момент создают и продают курсы<br>на платформе Courses</p>
+                <div class="feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h3 class="feature-title">Получайте сертификаты</h3>
+                    <p class="feature-description">Получите признание за свои достижения с официальными сертификатами</p>
                 </div>
             </div>
-
-            <!-- Статистика 4 -->
             <div class="col-md-6 col-lg-3">
-                <div class="stat-card h-100 p-4 bg-light rounded-3">
-                    <h3 class="stat-value display-5 fw-bold" style="color: #4b3f2f;">1 млн руб. в месяц</h3>
-                    <p class="stat-description">и более смогли заработать 5390 клиентов<br>в 2024 году</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-5">
-            <div class="col-lg-8 mx-auto text-center">
-                <div class="p-4 rounded-3">
-                    @if (!User.Identity.IsAuthenticated)
-                    {
-                        <a href="../Account/Register" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
-                            ЗАРЕГИСТРИРОВАТЬСЯ →
-                        </a>
-                    }
-                    else if (User.IsInRole("Student"))
-                    {
-                        <a asp-controller="Home" asp-action="Student" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
-                            НАЧАТЬ КУРС →
-                        </a>
-                    }
-                    else if (User.IsInRole("Teacher"))
-                    {
-                        <a asp-controller="Home" asp-action="Teacher" class="btn custom-btn btn-lg px-5 py-3 rounded-3">
-                            СОЗДАТЬ КУРС →
-                        </a>
-                    }
+                <div class="feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="feature-title">Присоединяйтесь к сообществу</h3>
+                    <p class="feature-description">Общайтесь с тысячами учащихся и преподавателей по всему миру</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<!-- Popular Courses Section -->
+<section class="popular-courses-section py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Популярные курсы</h2>
+        </div>
+        @if (Model.PopularCourses.Any())
+        {
+            <div class="row g-4">
+                @foreach (var course in Model.PopularCourses)
+                {
+                    var studentsCount = course.UserCourses?.Count ?? 0;
+                    var averageRating = course.Reviews?.Any() == true 
+                        ? course.Reviews.Average(r => r.Rating) 
+                        : 0;
+                    var reviewsCount = course.Reviews?.Count ?? 0;
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="course-card">
+                            <div class="course-image">
+                                <img src="https://via.placeholder.com/400x250?text=@Uri.EscapeDataString(course.Title)" alt="@course.Title" />
+                            </div>
+                            <div class="course-content">
+                                <h3 class="course-title">@course.Title</h3>
+                                <p class="course-description">@(course.Description?.Length > 100 ? course.Description.Substring(0, 100) + "..." : course.Description)</p>
+                                <p class="course-instructor">Преподаватель: @(course.Teacher?.FullName ?? "Не указан")</p>
+                                <div class="course-rating">
+                                    <div class="stars">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fas fa-star @(i <= Math.Round(averageRating) ? "active" : "")"></i>
+                                        }
+                                    </div>
+                                    <span class="rating-text">@averageRating.ToString("F1") (@reviewsCount @(reviewsCount == 1 ? "отзыв" : reviewsCount < 5 ? "отзыва" : "отзывов"), @studentsCount @(studentsCount == 1 ? "студент" : studentsCount < 5 ? "студента" : "студентов"))</span>
+                                </div>
+                                <div class="course-footer">
+                                    <span class="course-price">Бесплатно</span>
+                                    <a asp-controller="Student" asp-action="CourseDetails" asp-route-id="@course.Id" class="btn btn-sm btn-outline-primary">Подробнее</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <p class="text-muted">Популярные курсы появятся здесь</p>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>LearnHub</span>
+                    </div>
+                    <p class="footer-description">Расширяем возможности учащихся по всему миру качественным образованием и экспертными курсами.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <h4 class="footer-title">Быстрые ссылки</h4>
+                <ul class="footer-links">
+                    <li><a asp-controller="Home" asp-action="Index">Каталог курсов</a></li>
+                    <li><a href="#">Стать преподавателем</a></li>
+                    <li><a href="#">Цены</a></li>
+                    <li><a href="#">О нас</a></li>
+                </ul>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <h4 class="footer-title">Поддержка</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Центр помощи</a></li>
+                    <li><a href="#">Часто задаваемые вопросы</a></li>
+                    <li><a href="#">Условия использования</a></li>
+                    <li><a href="#">Политика конфиденциальности</a></li>
+                </ul>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <h4 class="footer-title">Свяжитесь с нами</h4>
+                <ul class="footer-contact">
+                    <li>
+                        <i class="fas fa-envelope"></i>
+                        <span>support@learnhub.com</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-phone"></i>
+                        <span>+1 (234) 567-890</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>123 Learning Street<br>Education City, EC 12345</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom text-center mt-5 pt-4 border-top">
+            <p>&copy; 2024 LearnHub. Все права защищены.</p>
+        </div>
+    </div>
+</footer>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(to bottom, #ffffff 0%, #f0f4ff 100%);
+            padding: 120px 0 80px;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: #666;
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-hero {
+            padding: 0.875rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary.btn-hero {
+            background-color: #000;
+            border-color: #000;
+            color: #fff;
+        }
+
+        .btn-primary.btn-hero:hover {
+            background-color: #333;
+            border-color: #333;
+        }
+
+        .btn-outline-hero {
+            padding: 0.875rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            border: 2px solid #000;
+            color: #000;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-hero:hover {
+            background-color: #000;
+            color: #fff;
+        }
+
+        /* Why Choose Section */
+        .why-choose-section {
+            background: #fff;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .feature-card {
+            padding: 2rem 1rem;
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #e3f2fd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .feature-icon i {
+            font-size: 2rem;
+            color: #1976d2;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+        }
+
+        .feature-description {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Popular Courses Section */
+        .popular-courses-section {
+            background: #f8f9fa;
+        }
+
+        .course-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .course-image {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        .course-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .course-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .course-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.75rem;
+        }
+
+        .course-description {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+
+        .course-instructor {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .course-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .stars i {
+            color: #ddd;
+            font-size: 0.9rem;
+        }
+
+        .stars i.active {
+            color: #ffc107;
+        }
+
+        .rating-text {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .course-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .course-price {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        /* Footer */
+        .footer-section {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 4rem 0 2rem;
+        }
+
+        .footer-brand {
+            margin-bottom: 2rem;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .footer-logo i {
+            color: #1976d2;
+        }
+
+        .footer-description {
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .footer-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-links a {
+            color: #aaa;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #fff;
+        }
+
+        .footer-contact {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-contact li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            color: #aaa;
+        }
+
+        .footer-contact i {
+            color: #1976d2;
+            margin-top: 0.25rem;
+        }
+
+        .footer-bottom {
+            color: #aaa;
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .btn-hero,
+            .btn-outline-hero {
+                width: 100%;
+            }
+        }
+    </style>
+}
