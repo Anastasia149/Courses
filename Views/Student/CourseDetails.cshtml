@@ -30,17 +30,7 @@
                     }
                 </div>
             </div>
-            <!-- Форма домашки для выбранного урока -->
-            @if (Model.SelectedLesson != null)
-            {
-                if (Model.SelectedLesson.HasHomework && Model.SelectedLesson.HomeworkStatus == Courses.Models.HomeworkStatus.Approved)
-                {
-                    <div class="alert alert-success mb-2" style="max-width: 400px;">
-                        Задание принято!
-                    </div>
-                }
-                @await Html.PartialAsync("_HomeworkSubmission", Model.SelectedLesson)
-            }
+            <!-- Форма домашки для выбранного урока - показывается только при выборе урока -->
         </div>
         <div class="col-md-8">
             @if (Model.SelectedLesson != null)
@@ -73,6 +63,19 @@
                                 </div>  
                             </div>
                         }
+                        
+                        <!-- Форма домашки для выбранного урока -->
+                        <div class="mt-4">
+                            @if (Model.SelectedLesson.HasHomework && Model.SelectedLesson.HomeworkStatus == Courses.Models.HomeworkStatus.Approved)
+                            {
+                                <div class="alert alert-success mb-3">
+                                    <i class="fas fa-check-circle"></i> Задание принято!
+                                </div>
+                            }
+                            @await Html.PartialAsync("_HomeworkSubmission", Model.SelectedLesson)
+                        </div>
+                        
+                        <!-- Комментарии -->
                         <script>
                             window.lessonIdForComments = @Model.SelectedLesson.Id;
                         </script>
@@ -93,7 +96,12 @@
             }
             else
             {
-                <div class="alert alert-info mt-4">Выберите урок для просмотра материала.</div>
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Выберите урок из списка для просмотра материала</h5>
+                    </div>
+                </div>
             }
         </div>
     </div>

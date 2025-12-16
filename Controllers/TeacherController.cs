@@ -505,9 +505,23 @@
             }
 
             [HttpGet]
-            public IActionResult CreateCourse()
+            public async Task<IActionResult> CreateCourse()
             {
-                return View();
+                var categories = await _context.CourseCategories
+                    .OrderBy(c => c.Name)
+                    .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                    {
+                        Value = c.Id.ToString(),
+                        Text = c.Name
+                    })
+                    .ToListAsync();
+
+                var model = new CreateCourseViewModel
+                {
+                    Categories = categories
+                };
+
+                return View(model);
             }
 
             [HttpPost]
@@ -516,6 +530,15 @@
                 {
                 if (!ModelState.IsValid)
                 {
+                    var categories = await _context.CourseCategories
+                        .OrderBy(c => c.Name)
+                        .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                        {
+                            Value = c.Id.ToString(),
+                            Text = c.Name
+                        })
+                        .ToListAsync();
+                    model.Categories = categories;
                     return View(model);
                 }
 
@@ -523,11 +546,18 @@
                 {
                     var teacherId = _userManager.GetUserId(User);
 
+                    string categoryName = null;
+                    if (model.CategoryId.HasValue)
+                    {
+                        var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
+                        categoryName = category?.Name;
+                    }
+
                     var course = new Course
                     {
                         Title = model.Title,
                         Description = model.Description,
-                        Category = model.Category,
+                        Category = categoryName,
                         DifficultyLevel = model.DifficultyLevel,
                         TeacherId = teacherId,
                         CreatedAt = DateTime.UtcNow
@@ -557,12 +587,31 @@
                     return NotFound();
                 }
 
+                var categories = await _context.CourseCategories
+                    .OrderBy(c => c.Name)
+                    .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                    {
+                        Value = c.Id.ToString(),
+                        Text = c.Name,
+                        Selected = c.Name == course.Category
+                    })
+                    .ToListAsync();
+
+                int? categoryId = null;
+                if (!string.IsNullOrEmpty(course.Category))
+                {
+                    var selectedCategory = await _context.CourseCategories
+                        .FirstOrDefaultAsync(c => c.Name == course.Category);
+                    categoryId = selectedCategory?.Id;
+                }
+
                 var model = new EditCourseViewModel
                 {
                     Id = course.Id,
                     Title = course.Title,
                     Description = course.Description,
-                    Category = course.Category,
+                    CategoryId = categoryId,
+                    Categories = categories,
                     DifficultyLevel = course.DifficultyLevel
                 };
 
@@ -575,6 +624,15 @@
             {
                 if (!ModelState.IsValid)
                 {
+                    var categories = await _context.CourseCategories
+                        .OrderBy(c => c.Name)
+                        .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                        {
+                            Value = c.Id.ToString(),
+                            Text = c.Name
+                        })
+                        .ToListAsync();
+                    model.Categories = categories;
                     return View(model);
                 }
 
@@ -584,9 +642,16 @@
                     return NotFound();
                 }
 
+                string categoryName = null;
+                if (model.CategoryId.HasValue)
+                {
+                    var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
+                    categoryName = category?.Name;
+                }
+
                 course.Title = model.Title;
                 course.Description = model.Description;
-                course.Category = model.Category;
+                course.Category = categoryName;
                 course.DifficultyLevel = model.DifficultyLevel;
 
                 await _context.SaveChangesAsync();
@@ -878,7 +943,6 @@
                     var lessonComments = _context.LessonComments.Where(c => lessonIds.Contains(c.LessonId));
                     var userCourses = _context.UserCourses.Where(uc => uc.CourseId == id);
                     var reviews = _context.Reviews.Where(r => r.CourseId == id);
-                    var categories = _context.Categories.Where(cat => cat.CourseId == id);
                     var modules = _context.Modules.Where(m => m.CourseId == id);
                     var certificates = _context.Certificates.Where(c => c.CourseId == id);
                     var notifications = _context.Notifications
@@ -891,7 +955,6 @@
                     _context.Notifications.RemoveRange(notifications);
                     _context.UserCourses.RemoveRange(userCourses);
                     _context.Reviews.RemoveRange(reviews);
-                    _context.Categories.RemoveRange(categories);
                     _context.Modules.RemoveRange(modules);
                     _context.Certificates.RemoveRange(certificates);
                     _context.Lessons.RemoveRange(lessons);

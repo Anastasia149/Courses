@@ -131,11 +131,10 @@ namespace Courses.Controllers
                 lesson.Files = GetLessonFiles(lesson.Id);
             }
 
-            // Выбор урока
+            // Выбор урока только если явно указан lessonId
             if (lessonId.HasValue)
                 course.SelectedLesson = course.Lessons.FirstOrDefault(l => l.Id == lessonId.Value);
-            else
-                course.SelectedLesson = course.Lessons.OrderBy(l => l.Order).FirstOrDefault();
+            // Иначе SelectedLesson остается null - показываем только список уроков
 
             return View(course);
         }

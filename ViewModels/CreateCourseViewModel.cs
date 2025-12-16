@@ -13,8 +13,9 @@ namespace Courses.ViewModels
         public string Description { get; set; }
 
         [Display(Name = "Категория")]
-        [StringLength(50, ErrorMessage = "Не более 50 символов")]
-        public string Category { get; set; }
+        public int? CategoryId { get; set; }
+        
+        public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Categories { get; set; } = new();
 
         [Display(Name = "Уровень сложности")]
         [StringLength(20, ErrorMessage = "Не более 20 символов")]

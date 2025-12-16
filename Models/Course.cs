@@ -25,6 +25,5 @@ namespace Courses.Models
         public List<UserCourse> UserCourses { get; set; } = new();
         public List<Module> Modules { get; set; } = new();
         public List<Review> Reviews { get; set; } = new();
-        public List<Category> Categories { get; set; } = new();
     }
 }

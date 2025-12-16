@@ -21,7 +21,7 @@ namespace Courses.Data
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<Module> Modules { get; set; }
         public DbSet<Review> Reviews { get; set; }
-        public DbSet<Category> Categories { get; set; }
+        public DbSet<CourseCategory> CourseCategories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -114,12 +114,6 @@ namespace Courses.Data
                 .HasOne(r => r.User)
                 .WithMany()
                 .HasForeignKey(r => r.UserId);
-
-            // Настройка связи между Course и Category
-            builder.Entity<Category>()
-                .HasOne(c => c.Course)
-                .WithMany(c => c.Categories)
-                .HasForeignKey(c => c.CourseId);
         }
     }
 }

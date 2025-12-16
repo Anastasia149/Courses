@@ -250,26 +250,26 @@
                                                                     <h5 class="lesson-title mb-0">@lesson.Title</h5>
                                                                 </div>
                                                                 <div class="lesson-actions d-flex align-items-center gap-2">
-                                                                    <a asp-controller="Teacher" asp-action="EditLesson" asp-route-id="@lesson.Id"
+                                                        <a asp-controller="Teacher" asp-action="EditLesson" asp-route-id="@lesson.Id"
                                                                        class="btn btn-sm btn-outline-secondary">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </a>
-                                                                    <form asp-controller="Teacher" asp-action="DeleteLesson" method="post"
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <form asp-controller="Teacher" asp-action="DeleteLesson" method="post"
                                                                           onsubmit="return confirm('Удалить этот урок?');" class="d-inline">
-                                                                        <input type="hidden" name="id" value="@lesson.Id" />
-                                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                </div>
+                                                            <input type="hidden" name="id" value="@lesson.Id" />
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                             </div>
                                                             <div class="lesson-meta d-flex align-items-center gap-3 mt-2">
                                                                 <span class="badge bg-light text-dark">
                                                                     <i class="fas fa-file-alt"></i> @(lesson.Homeworks?.Count ?? 0) работ
                                                                 </span>
-                                                                <button type="button" class="btn btn-info btn-sm view-comments-btn" data-lesson-id="@lesson.Id" data-lesson-title="@lesson.Title">
-                                                                    <i class="fas fa-comments"></i> Посмотреть комментарии
-                                                                </button>
+                                                    <button type="button" class="btn btn-info btn-sm view-comments-btn" data-lesson-id="@lesson.Id" data-lesson-title="@lesson.Title">
+                                                        <i class="fas fa-comments"></i> Посмотреть комментарии
+                                                    </button>
                                                             </div>
                                                         </div>
                                                     }
