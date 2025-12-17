@@ -28,6 +28,9 @@ namespace Courses.Models
 
         // Коллекция файлов домашнего задания
         public ICollection<HomeworkFile> Files { get; set; } = new List<HomeworkFile>();
+        
+        // Коллекция комментариев к заданию
+        public ICollection<HomeworkComment> Comments { get; set; } = new List<HomeworkComment>();
     }
 
     public class HomeworkFile

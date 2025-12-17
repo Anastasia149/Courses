@@ -2,9 +2,13 @@
 
 @{
     ViewData["Title"] = "Уведомления";
+    if (User.IsInRole("Teacher"))
+    {
+        Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    }
 }
 
-<div class="container mt-4">
+<div class="notifications-page">
     <h1 class="mb-4">Уведомления</h1>
 
     @if (Model.Any())

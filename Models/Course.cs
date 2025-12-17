@@ -17,6 +17,7 @@ namespace Courses.Models
 
         public string? Category { get; set; }
         public string? DifficultyLevel { get; set; }
+        public string? CoverImagePath { get; set; }
 
         // Связи
         public string TeacherId { get; set; } // ID преподавателя (связь с User)

@@ -25,6 +25,11 @@ namespace Courses.Controllers
                 .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
+            // Устанавливаем счетчик непрочитанных уведомлений для бокового меню
+            var unreadCount = await _context.Notifications
+                .CountAsync(n => n.UserId == userId && !n.IsRead);
+            ViewBag.UnreadNotificationsCount = unreadCount;
+
             return View(notifications);
         }
 

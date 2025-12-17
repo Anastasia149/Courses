@@ -1,38 +1,88 @@
 @model Courses.ViewModels.CourseInvitationViewModel
-
 @{
-    ViewData["Title"] = "Пригласить студента";
+    ViewData["Title"] = "Добавление студента";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-6 offset-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Пригласить студента на курс "@Model.CourseName"</h3>
-                </div>
-                <div class="card-body">
-                    <form asp-action="Invite" method="post">
-                        <input type="hidden" asp-for="CourseId" />
-                        <input type="hidden" asp-for="CourseName" />
-                        
-                        <div class="form-group mb-3">
-                            <label asp-for="StudentEmail" class="form-label">Email студента</label>
-                            <input asp-for="StudentEmail" class="form-control" />
-                            <span asp-validation-for="StudentEmail" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-primary">Отправить приглашение</button>
-                            <a asp-controller="Teacher" asp-action="EditLesson" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">Отмена</a>
-                        </div>
-                    </form>
-                </div>
+<div class="create-course-page">
+    <!-- Header -->
+    <div class="course-header">
+        <div class="header-left">
+            <h1 class="page-title">Добавление студента</h1>
+            <div class="auto-saved-indicator">
+                <i class="fas fa-check-circle text-success me-1"></i>
+                <span>Auto-saved</span>
             </div>
+        </div>
+        <div class="header-actions">
+            <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-outline-secondary">
+                Отмена
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs course-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                Основное
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="basic" role="tabpanel">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <h5>Ошибки валидации:</h5>
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                </div>
+            }
+            <form asp-action="Invite" method="post" id="inviteForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="CourseId" />
+                <input type="hidden" asp-for="CourseName" />
+
+                <!-- Course Info -->
+                <div class="form-group mb-4">
+                    <label class="form-label">Курс</label>
+                    <div class="form-control-plaintext">
+                        <strong>@Model.CourseName</strong>
+                    </div>
+                </div>
+
+                <!-- Student Email -->
+                <div class="form-group mb-4">
+                    <label asp-for="StudentEmail" class="form-label">
+                        Email студента <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="StudentEmail" class="form-control form-control-lg" 
+                           type="email" 
+                           placeholder="Введите email студента" />
+                    <span asp-validation-for="StudentEmail" class="text-danger"></span>
+                    <small class="form-text text-muted">Студент должен быть зарегистрирован в системе</small>
+                </div>
+
+                <!-- Submit button -->
+                <div class="form-actions mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Отправить приглашение
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/create-course.css" asp-append-version="true" />
+}
+
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-} 
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

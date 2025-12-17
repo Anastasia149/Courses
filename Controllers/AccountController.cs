@@ -38,6 +38,12 @@ namespace Courses.Controllers
 
             if (result.Succeeded)
             {
+                var user = await userManager.FindByEmailAsync(model.Email);
+                if (user != null && await userManager.IsInRoleAsync(user, "Teacher"))
+                {
+                    return Redirect("/Teacher");
+                }
+
                 return RedirectToAction("Index", "Home");
             }
 
@@ -93,6 +99,11 @@ namespace Courses.Controllers
                 await userManager.AddToRoleAsync(user, model.Role);
 
                 await signInManager.SignInAsync(user, isPersistent: false);
+                if (await userManager.IsInRoleAsync(user, "Teacher"))
+                {
+                    return Redirect("/Teacher");
+                }
+
                 return RedirectToAction("Login", "Account");
             }
 

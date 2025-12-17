@@ -13,7 +13,7 @@ namespace Courses.ViewModels
         [Required]
         public string Title { get; set; }
 
-        [Required]
+        // Order не изменяется при редактировании
         public int Order { get; set; }
 
         [DataType(DataType.MultilineText)]

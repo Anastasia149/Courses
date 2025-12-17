@@ -1,44 +1,69 @@
 @model Courses.ViewModels.CreateModuleViewModel
 @{
-    ViewData["Title"] = "Создать модуль";
+    ViewData["Title"] = "Создание нового модуля";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-success text-white">
-            <h2><i class="fas fa-layer-group me-2"></i>Создать модуль</h2>
+<div class="create-course-page">
+    <!-- Header -->
+    <div class="course-header">
+        <div class="header-left">
+            <h1 class="page-title">Создание нового модуля</h1>
+            <div class="auto-saved-indicator">
+                <i class="fas fa-check-circle text-success me-1"></i>
+                <span>Auto-saved</span>
+            </div>
         </div>
-        <div class="card-body">
-            <form asp-action="CreateModule" method="post">
+        <div class="header-actions">
+            <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-outline-secondary">
+                Отмена
+            </a>
+            <button type="button" class="btn btn-outline-secondary" id="saveDraftBtn">
+                <i class="fas fa-save me-2"></i>Сохранить черновик
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="previewBtn">
+                <i class="fas fa-eye me-2"></i>Предпросмотр
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs course-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                Основное
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="basic" role="tabpanel">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <h5>Ошибки валидации:</h5>
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                </div>
+            }
+            <form asp-action="CreateModule" method="post" id="moduleForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="CourseId" />
 
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-                <div class="mb-3">
-                    <label asp-for="Title" class="form-label"></label>
-                    <input asp-for="Title" class="form-control" />
+                <!-- Module Title -->
+                <div class="form-group mb-4">
+                    <label asp-for="Title" class="form-label">
+                        Название модуля <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="Title" class="form-control form-control-lg" placeholder="Введите название модуля" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="Description" class="form-label"></label>
-                    <textarea asp-for="Description" class="form-control" rows="4"></textarea>
-                    <span asp-validation-for="Description" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="OrderNumber" class="form-label"></label>
-                    <input asp-for="OrderNumber" class="form-control" type="number" min="1" />
-                    <span asp-validation-for="OrderNumber" class="text-danger"></span>
-                </div>
-
-                <div class="d-flex justify-content-between">
-                    <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Назад
-                    </a>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>Создать
+                <!-- Submit button -->
+                <div class="form-actions mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Создать модуль
                     </button>
                 </div>
             </form>
@@ -46,7 +71,12 @@
     </div>
 </div>
 
-@section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+@section Styles {
+    <link rel="stylesheet" href="~/css/create-course.css" asp-append-version="true" />
 }
 
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

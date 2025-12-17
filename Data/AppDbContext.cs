@@ -10,6 +10,32 @@ namespace Courses.Data
         {
         }
 
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            // Автоматически удаляем комментарии при удалении задания
+            var deletedHomeworks = ChangeTracker.Entries<Homework>()
+                .Where(e => e.State == EntityState.Deleted)
+                .ToList();
+
+            foreach (var entry in deletedHomeworks)
+            {
+                var homeworkId = entry.Property("Id").CurrentValue;
+                if (homeworkId != null)
+                {
+                    var commentsToDelete = await HomeworkComments
+                        .Where(c => c.HomeworkId == (int)homeworkId)
+                        .ToListAsync(cancellationToken);
+                    
+                    if (commentsToDelete.Any())
+                    {
+                        HomeworkComments.RemoveRange(commentsToDelete);
+                    }
+                }
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
         // Добавляем новые DbSet для курсов
         public DbSet<Course> Courses { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
@@ -17,7 +43,7 @@ namespace Courses.Data
         public DbSet<HomeworkFile> HomeworkFiles { get; set; }
         public DbSet<UserCourse> UserCourses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<LessonComment> LessonComments { get; set; }
+        public DbSet<HomeworkComment> HomeworkComments { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<Module> Modules { get; set; }
         public DbSet<Review> Reviews { get; set; }
@@ -114,6 +140,20 @@ namespace Courses.Data
                 .HasOne(r => r.User)
                 .WithMany()
                 .HasForeignKey(r => r.UserId);
+
+            // Настройка связи между Homework и HomeworkComment
+            // Удаление комментариев обрабатывается в SaveChangesAsync
+            builder.Entity<HomeworkComment>()
+                .HasOne(c => c.Homework)
+                .WithMany(h => h.Comments)
+                .HasForeignKey(c => c.HomeworkId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Настройка связи между User и HomeworkComment
+            builder.Entity<HomeworkComment>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId);
         }
     }
 }

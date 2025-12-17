@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Courses.Data;
 using Courses.Models;
 using Courses.ViewModels;
+using Courses.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,15 +15,18 @@ namespace Courses.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<User> _userManager;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService;
 
         public HomeController(
             ILogger<HomeController> logger,
             UserManager<User> userManager,
-            AppDbContext context)
+            AppDbContext context,
+            INotificationService notificationService)
         {
             _logger = logger;
             _userManager = userManager;
             _context = context;
+            _notificationService = notificationService;
         }
 
         public async Task<IActionResult> Index()
@@ -88,6 +92,10 @@ namespace Courses.Controllers
                 return NotFound();
             }
 
+            // Устанавливаем счетчик непрочитанных уведомлений для бокового меню
+            var userId = _userManager.GetUserId(User);
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
+
             var model = new TeacherProfileViewModel
             {
                 FullName = user.FullName,
@@ -106,6 +114,10 @@ namespace Courses.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
+
+            // Устанавливаем счетчик непрочитанных уведомлений для бокового меню
+            var userId = _userManager.GetUserId(User);
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
 
             // Устанавливаем текущий аватар для отображения
             model.ExistingAvatarPath = user.AvatarPath;

@@ -1,51 +1,176 @@
 ﻿@model Courses.ViewModels.CreateCourseViewModel
 @{
     ViewData["Title"] = "Создание нового курса";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2>Создание нового курса</h2>
-
-    <form asp-action="CreateCourse" method="post" enctype="multipart/form-data">
-        <div class="form-group mb-3">
-            <label asp-for="Title" class="form-label">Название курса</label>
-            <input asp-for="Title" class="form-control" />
-            <span asp-validation-for="Title" class="text-danger"></span>
-        </div>
-
-        <div class="form-group mb-3">
-            <label asp-for="Description" class="form-label">Полное описание</label>
-            <textarea asp-for="Description" class="form-control" rows="5"></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label asp-for="CategoryId" class="form-label">Категория</label>
-                <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                    <option value="">Выберите категорию...</option>
-                </select>
-                <span asp-validation-for="CategoryId" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="DifficultyLevel" class="form-label">Уровень сложности</label>
-                <select asp-for="DifficultyLevel" class="form-select">
-                    <option value="">Выберите уровень...</option>
-                    <option value="Начинающий">Начинающий</option>
-                    <option value="Средний">Средний</option>
-                    <option value="Продвинутый">Продвинутый</option>
-                </select>
-                <span asp-validation-for="DifficultyLevel" class="text-danger"></span>
+<div class="create-course-page">
+    <!-- Header -->
+    <div class="course-header">
+        <div class="header-left">
+            <h1 class="page-title">Создание нового курса</h1>
+            <div class="auto-saved-indicator">
+                <i class="fas fa-check-circle text-success me-1"></i>
+                <span>Auto-saved</span>
             </div>
         </div>
+        <div class="header-actions">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                Отмена
+            </a>
+            <button type="button" class="btn btn-outline-secondary" id="saveDraftBtn">
+                <i class="fas fa-save me-2"></i>Сохранить черновик
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="previewBtn">
+                <i class="fas fa-eye me-2"></i>Предпросмотр
+            </button>
+        </div>
+    </div>
 
-        <button type="submit" class="btn btn-primary">Создать курс</button>
-        <a asp-action="Index" class="btn btn-secondary">Отмена</a>
-    </form>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs course-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                Основное
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#structure" type="button" role="tab">
+                Структура
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                Настройки
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="basic" role="tabpanel">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <h5>Ошибки валидации:</h5>
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                </div>
+            }
+            <form asp-action="CreateCourse" method="post" enctype="multipart/form-data" id="courseForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="SelectedCategories" id="SelectedCategories" />
+
+                <!-- Course Title -->
+                <div class="form-group mb-4">
+                    <label asp-for="Title" class="form-label">
+                        Название курса <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="Title" class="form-control form-control-lg" placeholder="Введите название курса" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <!-- Categories -->
+                <div class="form-group mb-4">
+                    <label asp-for="CategoryId" class="form-label">Категории</label>
+                    <div class="d-flex gap-2 mb-2">
+                        <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                            <option value="">Выберите категорию...</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" id="addCategoryBtn">
+                            Добавить
+                        </button>
+                    </div>
+                    <div id="selectedCategories" class="selected-categories mb-2"></div>
+                </div>
+
+                <!-- Course Language -->
+                <div class="form-group mb-4">
+                    <label asp-for="Language" class="form-label">Язык курса</label>
+                    <select asp-for="Language" class="form-select">
+                        <option value="Русский">Русский</option>
+                        <option value="English">English</option>
+                        <option value="Українська">Українська</option>
+                        <option value="Deutsch">Deutsch</option>
+                    </select>
+                </div>
+
+                <!-- Short Description -->
+                <div class="form-group mb-4">
+                    <label asp-for="ShortDescription" class="form-label">Описание</label>
+                    <textarea asp-for="ShortDescription" class="form-control" rows="5" 
+                              placeholder="Описание курса" 
+                              maxlength="200" id="shortDescription"></textarea>
+                    <div class="character-count">
+                        <span id="shortDescCount">0</span>/200
+                    </div>
+                    <span asp-validation-for="ShortDescription" class="text-danger"></span>
+                </div>
+
+                <!-- Course Cover -->
+                <div class="form-group mb-4">
+                    <label class="form-label">Обложка курса</label>
+                    <label for="coverImageInput" class="file-upload-area" id="coverUploadArea">
+                        <input type="file" asp-for="CoverImage" accept="image/png,image/jpeg,image/jpg" class="d-none" id="coverImageInput" />
+                        <div class="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                            <p class="mb-1">Нажмите для загрузки или перетащите файл</p>
+                            <p class="text-muted small">PNG, JPG до 10MB</p>
+                        </div>
+                        <div class="upload-preview d-none">
+                            <img id="coverPreview" src="" alt="Preview" />
+                            <button type="button" class="btn btn-sm btn-danger remove-image" id="removeCoverBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </label>
+                    <span asp-validation-for="CoverImage" class="text-danger"></span>
+                </div>
+
+                <!-- Difficulty Level - перемещено из Settings -->
+                <div class="form-group mb-4">
+                    <label asp-for="DifficultyLevel" class="form-label">Уровень сложности</label>
+                    <select asp-for="DifficultyLevel" class="form-select">
+                        <option value="">Выберите уровень...</option>
+                        <option value="Начинающий">Начинающий</option>
+                        <option value="Средний">Средний</option>
+                        <option value="Продвинутый">Продвинутый</option>
+                    </select>
+                    <span asp-validation-for="DifficultyLevel" class="text-danger"></span>
+                </div>
+
+                <!-- Submit button inside form -->
+                <div class="form-actions mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Опубликовать курс
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Structure Tab -->
+        <div class="tab-pane fade" id="structure" role="tabpanel">
+            <div class="structure-content">
+                <p class="text-muted">Структура курса будет доступна после создания курса</p>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="settings-content">
+                <p class="text-muted">Уровень сложности можно выбрать во вкладке "Основное"</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/create-course.css" asp-append-version="true" />
+}
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script src="~/js/create-course.js" asp-append-version="true"></script>
 }

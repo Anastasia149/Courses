@@ -100,7 +100,7 @@ namespace Courses.Controllers
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"Приглашение успешно отправлено студенту {student.FullName}";
-            return RedirectToAction("Course", "Home", new { id = viewModel.CourseId });
+            return RedirectToAction("CourseDetails", "Teacher", new { id = viewModel.CourseId });
         }
     }
 } 

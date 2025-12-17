@@ -1,0 +1,483 @@
+@using Courses.ViewModels
+@using Courses.Models
+@using System.Security.Claims
+@model ReviewLessonAssignmentsViewModel
+@{
+    ViewData["Title"] = $"Проверка заданий: {Model.Lesson.Title}";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="review-assignments-container">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Левая панель: Список студентов -->
+            <div class="col-md-4 border-end">
+                <div class="students-panel">
+                    <div class="panel-header">
+                        <h5 class="mb-0">Список студентов</h5>
+                        <span class="badge bg-secondary">@Model.Students.Count студентов</span>
+                    </div>
+                    
+                    <div class="mb-3 mt-3">
+                        <select class="form-select" id="filterStatus">
+                            <option value="all">Все студенты</option>
+                            <option value="submitted">Сдавшие</option>
+                            <option value="pending">Ожидают проверки</option>
+                            <option value="approved">Принятые</option>
+                            <option value="rejected">Требуют доработки</option>
+                            <option value="not-submitted">Не сдавшие</option>
+                        </select>
+                    </div>
+
+                    <div class="students-list">
+                        @foreach (var studentInfo in Model.Students)
+                        {
+                            var statusClass = "";
+                            var statusText = "";
+                            var badgeClass = "";
+                            
+                            if (!studentInfo.HasSubmitted)
+                            {
+                                statusClass = "not-submitted";
+                                statusText = "Не сдано";
+                                badgeClass = "bg-secondary";
+                            }
+                            else
+                            {
+                                switch (studentInfo.Homework.Status)
+                                {
+                                    case HomeworkStatus.Pending:
+                                        statusClass = "pending";
+                                        statusText = "Ожидает проверки";
+                                        badgeClass = "bg-warning";
+                                        break;
+                                    case HomeworkStatus.Approved:
+                                        statusClass = "approved";
+                                        statusText = "Принято";
+                                        badgeClass = "bg-success";
+                                        break;
+                                    case HomeworkStatus.Rejected:
+                                        statusClass = "rejected";
+                                        statusText = "Требует доработки";
+                                        badgeClass = "bg-danger";
+                                        break;
+                                }
+                            }
+
+                            <div class="student-item @statusClass @(Model.SelectedStudentId == studentInfo.Student.Id ? "active" : "")" 
+                                 data-status="@statusClass"
+                                 onclick="location.href='@Url.Action("ReviewLessonAssignments", new { lessonId = Model.Lesson.Id, studentId = studentInfo.Student.Id })'">
+                                <div class="d-flex align-items-center">
+                                    @if (!string.IsNullOrEmpty(studentInfo.Student.AvatarPath))
+                                    {
+                                        <img src="@studentInfo.Student.AvatarPath" class="student-avatar" alt="@studentInfo.Student.FullName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="student-avatar-placeholder">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    }
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="student-name">@studentInfo.Student.FullName</div>
+                                        <div class="student-status">
+                                            <span class="badge @badgeClass">@statusText</span>
+                                            @if (studentInfo.NewCommentsCount > 0)
+                                            {
+                                                <span class="badge bg-info ms-2">@studentInfo.NewCommentsCount новое</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая панель: Выбранное задание -->
+            <div class="col-md-8">
+                @if (Model.SelectedHomework != null)
+                {
+                    <div class="assignment-panel">
+                        <div class="panel-header mb-4">
+                            <h4 class="mb-0">Отправленная работа</h4>
+                            <div class="text-muted small">
+                                Отправлено @Model.SelectedHomework.SubmittedAt.ToString("dd.MM.yyyy в HH:mm:ss")
+                            </div>
+                        </div>
+
+                        <!-- Действия -->
+                        <div class="action-buttons mb-4">
+                            @if (Model.SelectedHomework.Status == HomeworkStatus.Pending)
+                            {
+                                <form asp-action="RejectAssignment" method="post" class="d-inline-block mb-2 me-2" onsubmit="return confirm('Отметить как не сдано?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="homeworkId" value="@Model.SelectedHomework.Id" />
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <i class="fas fa-times"></i> Не сдано
+                                    </button>
+                                </form>
+                                <form asp-action="AcceptAssignment" method="post" class="d-inline-block mb-2" onsubmit="return confirm('Отметить как сдано?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="homeworkId" value="@Model.SelectedHomework.Id" />
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Сдано
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <div class="current-status mb-3">
+                                    <div class="alert alert-@(Model.SelectedHomework.Status == HomeworkStatus.Approved ? "success" : "danger")">
+                                        <strong>Текущий статус:</strong> 
+                                        @(Model.SelectedHomework.Status == HomeworkStatus.Approved ? "Сдано" : "Не сдано")
+                                    </div>
+                                </div>
+                                <div class="change-status-section mb-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#changeStatusModal">
+                                        <i class="fas fa-edit me-2"></i>Изменить
+                                    </button>
+                                </div>
+
+                                <!-- Modal для изменения статуса -->
+                                <div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="changeStatusModalLabel">Изменить статус задания</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="mb-3">Выберите новый статус:</p>
+                                                <div class="d-grid gap-2">
+                                                    <form asp-action="AcceptAssignment" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="homeworkId" value="@Model.SelectedHomework.Id" />
+                                                        <button type="submit" class="btn btn-success w-100">
+                                                            <i class="fas fa-check me-2"></i>Сдано
+                                                        </button>
+                                                    </form>
+                                                    <form asp-action="RejectAssignment" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="homeworkId" value="@Model.SelectedHomework.Id" />
+                                                        <button type="submit" class="btn btn-outline-danger w-100">
+                                                            <i class="fas fa-times me-2"></i>Не сдано
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Ответ студента -->
+                        <div class="submitted-work mb-4">
+                            <h5 class="mb-3">Ответ студента</h5>
+                            <div class="answer-content p-3 bg-light rounded">
+                                @if (!string.IsNullOrEmpty(Model.SelectedHomework.Answer))
+                                {
+                                    @Html.Raw(Model.SelectedHomework.Answer)
+                                }
+                                else
+                                {
+                                    <div class="text-muted">Студент не предоставил ответ</div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Файлы -->
+                        @if (Model.SelectedHomework.Files != null && Model.SelectedHomework.Files.Any())
+                        {
+                            <div class="files-section mb-4">
+                                <h5 class="mb-3">Прикрепленные файлы</h5>
+                                @foreach (var file in Model.SelectedHomework.Files)
+                                {
+                                    var fileExtension = System.IO.Path.GetExtension(file.FileName).ToLower();
+                                    var fileType = fileExtension switch
+                                    {
+                                        ".pdf" => "PDF Document",
+                                        ".doc" or ".docx" => "Word Document",
+                                        ".xls" or ".xlsx" => "Excel Spreadsheet",
+                                        ".ppt" or ".pptx" => "PowerPoint Presentation",
+                                        ".txt" => "Text Document",
+                                        ".zip" or ".rar" => "Archive",
+                                        ".jpg" or ".jpeg" or ".png" or ".gif" => "Image",
+                                        _ => "File"
+                                    };
+                                    
+                                    <div class="file-display-card mb-3">
+                                        <div class="file-icon-wrapper">
+                                            <i class="fas fa-file-alt file-icon"></i>
+                                        </div>
+                                        <div class="file-info">
+                                            <div class="file-name">@file.FileName</div>
+                                            <div class="file-type">@fileType</div>
+                                        </div>
+                                        <a href="@Url.Action("DownloadFile", "Teacher", new { homeworkId = Model.SelectedHomework.Id, fileId = file.Id })" 
+                                           class="btn btn-primary download-file-btn">
+                                            <i class="fas fa-download me-2"></i>Download File
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Комментарии -->
+                        <div class="comments-section">
+                            <h5 class="mb-3">Комментарии</h5>
+                            <div class="comments-list mb-3">
+                                @if (Model.SelectedHomework.Comments != null && Model.SelectedHomework.Comments.Any())
+                                {
+                                    @foreach (var comment in Model.SelectedHomework.Comments.OrderBy(c => c.CreatedAt))
+                                    {
+                                        <div class="comment-item mb-3 p-3 @(comment.UserId == currentUserId ? "bg-light" : "")">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <strong>@comment.User.FullName</strong>
+                                                    <span class="text-muted small ms-2">
+                                                        @comment.CreatedAt.ToString("dd.MM.yyyy в HH:mm")
+                                                    </span>
+                                                </div>
+                                                @if (comment.UserId == currentUserId || User.IsInRole("Teacher"))
+                                                {
+                                                    <form asp-controller="LessonComment" asp-action="DeleteComment" method="post" class="d-inline" onsubmit="return confirm('Удалить комментарий?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="commentId" value="@comment.Id" />
+                                                        <input type="hidden" name="returnUrl" value="@Url.Action("ReviewLessonAssignments", "Teacher", new { lessonId = Model.Lesson.Id, studentId = Model.SelectedStudentId })" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                            <div class="comment-text">@comment.Text</div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted">Пока нет комментариев</div>
+                                }
+                            </div>
+
+                            <!-- Форма добавления комментария -->
+                            <form asp-action="AddHomeworkComment" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="homeworkId" value="@Model.SelectedHomework.Id" />
+                                <div class="mb-3">
+                                    <textarea name="text" class="form-control" rows="3" placeholder="Введите ваш комментарий..." required maxlength="1000"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-comment"></i> Отправить комментарий
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+                else if (Model.SelectedStudentId != null)
+                {
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Студент еще не отправил задание</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-hand-pointer fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Выберите студента из списка для просмотра его задания</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .review-assignments-container {
+            min-height: calc(100vh - 200px);
+            padding: 2rem 0;
+        }
+
+        .students-panel {
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+
+        .students-list {
+            padding: 0.5rem;
+        }
+
+        .student-item {
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .student-item:hover {
+            background: #f3f4f6;
+            border-color: #1976d2;
+        }
+
+        .student-item.active {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+
+        .student-avatar,
+        .student-avatar-placeholder {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .student-avatar-placeholder {
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+
+        .student-name {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .student-status {
+            margin-top: 0.25rem;
+        }
+
+        .assignment-panel {
+            padding: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .answer-content {
+            min-height: 100px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .comment-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .comment-text {
+            color: #374151;
+            white-space: pre-wrap;
+        }
+
+        .empty-state {
+            padding: 4rem 2rem;
+        }
+
+        .file-display-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .file-icon-wrapper {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-icon {
+            font-size: 3.5rem;
+            color: #6b7280;
+        }
+
+        .file-info {
+            width: 100%;
+        }
+
+        .file-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+            word-break: break-word;
+        }
+
+        .file-type {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        .download-file-btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .download-file-btn:hover {
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#filterStatus').on('change', function() {
+                var filter = $(this).val();
+                $('.student-item').each(function() {
+                    var status = $(this).data('status');
+                    if (filter === 'all' || 
+                        (filter === 'submitted' && status !== 'not-submitted') ||
+                        (filter === 'pending' && status === 'pending') ||
+                        (filter === 'approved' && status === 'approved') ||
+                        (filter === 'rejected' && status === 'rejected') ||
+                        (filter === 'not-submitted' && status === 'not-submitted')) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+        });
+    </script>
+}
+

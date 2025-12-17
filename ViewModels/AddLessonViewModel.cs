@@ -11,9 +11,7 @@ namespace Courses.ViewModels
         [Display(Name = "Название")]
         public string Title { get; set; }
 
-        [Required(ErrorMessage = "Порядок урока обязателен")]
-        [Range(1, 100, ErrorMessage = "Порядок должен быть от 1 до 100")]
-        [Display(Name = "Порядок")]
+        // Order вычисляется автоматически в контроллере
         public int Order { get; set; }
 
         [Required(ErrorMessage = "Содержание урока обязательно")]
