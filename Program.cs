@@ -1,6 +1,7 @@
 using Courses.Data;
 using Courses.Models;
 using Courses.Services;
+using Courses.Filters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
@@ -12,7 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = LicenseType.Community;
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<NotificationCountActionFilter>();
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
@@ -33,6 +37,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICertificateService, CertificateService>();
+builder.Services.AddScoped<NotificationCountActionFilter>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -56,6 +61,13 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+// Специальный маршрут для /Teacher
+app.MapControllerRoute(
+    name: "teacher",
+    pattern: "Teacher",
+    defaults: new { controller = "Teacher", action = "Index" })
+    .WithStaticAssets();
 
 app.MapControllerRoute(
     name: "default",

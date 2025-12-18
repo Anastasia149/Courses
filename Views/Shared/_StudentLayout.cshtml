@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewData["Title"] - LearnHub</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="student-dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    @{
+                        var user = ViewBag.User as Courses.Models.User;
+                        // ВСЕГДА используем placeholder, если AvatarPath пустой или невалидный
+                        var avatarPath = "/images/avatar-placeholder.png";
+                        var hasValidAvatar = false;
+                        
+                        if (user != null && !string.IsNullOrEmpty(user.Id) && !string.IsNullOrWhiteSpace(user.AvatarPath))
+                        {
+                            // Проверяем, что путь начинается с правильного префикса
+                            if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                                user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                            {
+                                // Получаем имя файла из пути
+                                var fileName = System.IO.Path.GetFileName(user.AvatarPath);
+                                if (!string.IsNullOrEmpty(fileName))
+                                {
+                                    // Строгая проверка: имя файла должно начинаться с ID пользователя и подчеркивания
+                                    // Формат: {userId}_{timestamp}.ext или {userId}_{ticks}.ext
+                                    var expectedPrefix = user.Id + "_";
+                                    if (fileName.StartsWith(expectedPrefix, StringComparison.Ordinal))
+                                    {
+                                        // Дополнительная проверка: после ID должно идти подчеркивание и далее символы (не пустая строка)
+                                        var afterPrefix = fileName.Substring(expectedPrefix.Length);
+                                        if (!string.IsNullOrEmpty(afterPrefix) && afterPrefix.Length > 0)
+                                        {
+                                            avatarPath = user.AvatarPath;
+                                            hasValidAvatar = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Если аватар невалидный, принудительно используем placeholder
+                        if (!hasValidAvatar)
+                        {
+                            avatarPath = "/images/avatar-placeholder.png";
+                        }
+                    }
+                    @if (hasValidAvatar)
+                    {
+                        <img src="@avatarPath?v=@DateTime.Now.Ticks" alt="Аватар" class="profile-avatar" 
+                             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="profile-avatar-placeholder" style="display: none;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="profile-avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    }
+                    <div class="profile-info">
+                        <div class="profile-name">@(user?.FullName ?? "Студент")</div>
+                        <div class="profile-role">Студент</div>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                @{
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+                }
+                <a asp-controller="Student" asp-action="Course" class="nav-item @(currentController == "Student" && currentAction == "Course" ? "active" : "")">
+                    <i class="fas fa-book"></i>
+                    <span>Моё обучение</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Прогресс</span>
+                </a>
+                <a asp-controller="Student" asp-action="Certificates" class="nav-item @(currentController == "Student" && currentAction == "Certificates" ? "active" : "")">
+                    <i class="fas fa-certificate"></i>
+                    <span>Сертификаты</span>
+                </a>
+                <a asp-controller="Notification" asp-action="Index" class="nav-item @(currentController == "Notification" && currentAction == "Index" ? "active" : "")">
+                    <i class="fas fa-bell"></i>
+                    <span>Уведомления</span>
+                    @if (ViewBag.UnreadNotificationsCount != null && ViewBag.UnreadNotificationsCount > 0)
+                    {
+                        <span class="badge bg-danger">@ViewBag.UnreadNotificationsCount</span>
+                    }
+                </a>
+                <a asp-controller="Home" asp-action="Student" class="nav-item @(currentController == "Home" && currentAction == "Student" ? "active" : "")">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки профиля</span>
+                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="nav-item logout-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-link nav-link-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Выход</span>
+                    </button>
+                </form>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f5f7fa;
+    }
+
+    .student-dashboard {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+        width: 280px;
+        background: #fff;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .sidebar-header {
+        padding: 2rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #e5e7eb;
+    }
+
+    .profile-avatar-placeholder {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #e5e7eb;
+        border: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 1.5rem;
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .profile-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-role {
+        font-size: 0.875rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 1rem 0;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 0.875rem 1.5rem;
+        color: #4b5563;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        position: relative;
+        font-size: 0.9375rem;
+    }
+
+    .nav-item:hover {
+        background-color: #f3f4f6;
+        color: #1a1a1a;
+    }
+
+    .nav-item.active {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        font-weight: 500;
+    }
+
+    .nav-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background-color: #1976d2;
+    }
+
+    .nav-item i {
+        width: 20px;
+        text-align: center;
+        font-size: 1.125rem;
+    }
+
+    .nav-item .badge {
+        margin-left: auto;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 20px;
+        text-align: center;
+    }
+
+    .logout-form {
+        border-top: 1px solid #e5e7eb;
+        margin-top: auto;
+        padding: 0;
+    }
+
+    .nav-link-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 0.875rem 1.5rem;
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        color: #4b5563;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 0.9375rem;
+    }
+
+    .nav-link-btn:hover {
+        background-color: #f3f4f6;
+        color: #1a1a1a;
+    }
+
+    /* Main Content */
+    .main-content {
+        flex: 1;
+        margin-left: 280px;
+        padding: 2.5rem;
+        min-height: 100vh;
+    }
+
+    @@media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 1.5rem;
+        }
+    }
+</style>
+

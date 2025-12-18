@@ -35,10 +35,44 @@ namespace Courses.Controllers
         public async Task<IActionResult> Course()
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.GetUserAsync(User);
+
+            // Принудительно проверяем и очищаем неверный путь к аватару
+            if (user != null)
+            {
+                bool needsUpdate = false;
+                if (string.IsNullOrWhiteSpace(user.AvatarPath))
+                {
+                    // Если путь пустой, убеждаемся, что он null
+                    if (user.AvatarPath != null)
+                    {
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(user.Id))
+                {
+                    // Проверяем валидность пути
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (string.IsNullOrEmpty(fileName) || !fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        // Путь неверный - очищаем его
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate)
+                {
+                    await _userManager.UpdateAsync(user);
+                }
+            }
 
             // Получаем уведомления
             var notifications = await _notificationService.GetUserNotificationsAsync(userId);
             ViewBag.Notifications = notifications;
+            ViewBag.User = user;
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
 
             // Получаем курсы студента
             var enrolledCourses = await _context.UserCourses
@@ -58,7 +92,13 @@ namespace Courses.Controllers
                     EnrolledAt = uc.EnrollmentDate,
                     PendingHomeworksCount = uc.Course.Lessons
                         .SelectMany(l => l.Homeworks)
-                        .Count(h => h.Status == HomeworkStatus.Pending)
+                        .Count(h => h.StudentId == userId && h.Status == HomeworkStatus.Pending),
+                    CoverImagePath = uc.Course.CoverImagePath,
+                    ProgressPercentage = uc.Course.Lessons.Count > 0 
+                        ? (int)Math.Round((double)uc.Course.Lessons
+                            .Count(l => l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved)) 
+                            / uc.Course.Lessons.Count * 100)
+                        : 0
                 })
                 .ToListAsync();
 
@@ -89,6 +129,39 @@ namespace Courses.Controllers
         public async Task<IActionResult> CourseDetails(int id, int? lessonId = null)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.GetUserAsync(User);
+            
+            // Принудительно проверяем и очищаем неверный путь к аватару
+            if (user != null)
+            {
+                bool needsUpdate = false;
+                if (string.IsNullOrWhiteSpace(user.AvatarPath))
+                {
+                    if (user.AvatarPath != null)
+                    {
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(user.Id))
+                {
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (string.IsNullOrEmpty(fileName) || !fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate)
+                {
+                    await _userManager.UpdateAsync(user);
+                }
+            }
+            
+            ViewBag.User = user;
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
+            
             var userCourse = await _context.UserCourses
                 .Include(uc => uc.Course)
                     .ThenInclude(c => c.Teacher)
@@ -156,6 +229,10 @@ namespace Courses.Controllers
         public async Task<IActionResult> Certificates()
         {
             var userId = _userManager.GetUserId(User);
+            var user = await _userManager.GetUserAsync(User);
+            ViewBag.User = user;
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
+            
             var certificates = await _context.Certificates
                 .Include(c => c.Course)
                 .Include(c => c.Student)

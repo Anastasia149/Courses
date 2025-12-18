@@ -6,6 +6,10 @@
     {
         Layout = "~/Views/Shared/_TeacherLayout.cshtml";
     }
+    else if (User.IsInRole("Student"))
+    {
+        Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    }
 }
 
 <div class="notifications-page">

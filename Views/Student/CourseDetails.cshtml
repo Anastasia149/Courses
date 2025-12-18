@@ -3,13 +3,14 @@
 @model StudentCourseDetailsViewModel
 @{
     ViewData["Title"] = Model.Title;
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
     <link rel="stylesheet" href="~/css/course-details.css" />
 }
 
-<div class="container mt-4">
-    <nav aria-label="breadcrumb">
+<div class="course-details-content">
+    <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-action="Course">Мои курсы</a></li>
+            <li class="breadcrumb-item"><a asp-action="Course">Моё обучение</a></li>
             <li class="breadcrumb-item active">@Model.Title</li>
         </ol>
     </nav>
@@ -103,7 +104,14 @@
             }
         </div>
     </div>
-</div> 
+</div>
+
+<style>
+    .course-details-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+</style>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/js/lesson-comments.js"></script>

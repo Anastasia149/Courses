@@ -18,6 +18,8 @@ namespace Courses.ViewModels
         public int LessonsCount { get; set; }
         public DateTime EnrolledAt { get; set; }
         public int PendingHomeworksCount { get; set; }
+        public int ProgressPercentage { get; set; }
+        public string? CoverImagePath { get; set; }
     }
 
     public class StudentCourseDetailsViewModel
