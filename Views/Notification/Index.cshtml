@@ -32,10 +32,9 @@
                             <button type="submit" class="btn btn-success btn-sm">Присоединиться к курсу</button>
                         </form>
                     }
-
-                     else if (!notification.IsRead)
+                    else if (!notification.IsRead)
                     {
-                        <form asp-action="MarkAsRead" method="post" class="mt-2">
+                        <form asp-action="MarkAsRead" asp-controller="Notification" method="post" class="mt-2">
                             <input type="hidden" name="id" value="@notification.Id" />
                             <button type="submit" class="btn btn-sm btn-outline-primary">Отметить как прочитанное</button>
                         </form>

@@ -39,9 +39,16 @@ namespace Courses.Controllers
             if (result.Succeeded)
             {
                 var user = await userManager.FindByEmailAsync(model.Email);
-                if (user != null && await userManager.IsInRoleAsync(user, "Teacher"))
+                if (user != null)
                 {
-                    return Redirect("/Teacher");
+                    if (await userManager.IsInRoleAsync(user, "Teacher"))
+                    {
+                        return Redirect("/Teacher");
+                    }
+                    else if (await userManager.IsInRoleAsync(user, "Student"))
+                    {
+                        return RedirectToAction("Course", "Student");
+                    }
                 }
 
                 return RedirectToAction("Index", "Home");
@@ -102,6 +109,10 @@ namespace Courses.Controllers
                 if (await userManager.IsInRoleAsync(user, "Teacher"))
                 {
                     return Redirect("/Teacher");
+                }
+                else if (await userManager.IsInRoleAsync(user, "Student"))
+                {
+                    return RedirectToAction("Course", "Student");
                 }
 
                 return RedirectToAction("Login", "Account");

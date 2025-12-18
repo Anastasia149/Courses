@@ -31,13 +31,20 @@ namespace Courses.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Если пользователь авторизован и является преподавателем, перенаправляем на страницу преподавателя
+            // Если пользователь авторизован, перенаправляем на соответствующую страницу
             if (User.Identity?.IsAuthenticated == true)
             {
                 var user = await _userManager.GetUserAsync(User);
-                if (user != null && await _userManager.IsInRoleAsync(user, "Teacher"))
+                if (user != null)
                 {
-                    return RedirectToAction("Index", "Teacher");
+                    if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                    {
+                        return RedirectToAction("Index", "Teacher");
+                    }
+                    else if (await _userManager.IsInRoleAsync(user, "Student"))
+                    {
+                        return RedirectToAction("Course", "Student");
+                    }
                 }
             }
 

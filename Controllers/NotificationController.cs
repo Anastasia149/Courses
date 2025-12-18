@@ -2,6 +2,7 @@ using Courses.Data;
 using Courses.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -11,15 +12,18 @@ namespace Courses.Controllers
     public class NotificationController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public NotificationController(AppDbContext context)
+        public NotificationController(AppDbContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         public async Task<IActionResult> Index()
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Показываем только непрочитанные уведомления
             var notifications = await _context.Notifications
                 .Where(n => n.UserId == userId && !n.IsRead)
                 .OrderByDescending(n => n.CreatedAt)
@@ -29,6 +33,13 @@ namespace Courses.Controllers
             var unreadCount = await _context.Notifications
                 .CountAsync(n => n.UserId == userId && !n.IsRead);
             ViewBag.UnreadNotificationsCount = unreadCount;
+
+            // Передаем данные пользователя для layout студента
+            if (User.IsInRole("Student"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                ViewBag.User = user;
+            }
 
             return View(notifications);
         }

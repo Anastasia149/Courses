@@ -110,7 +110,14 @@
                     <div class="col-md-6 col-lg-4">
                         <div class="course-card">
                             <div class="course-image">
-                                <img src="https://via.placeholder.com/400x250?text=@Uri.EscapeDataString(course.Title)" alt="@course.Title" />
+                                @if (!string.IsNullOrEmpty(course.CoverImagePath))
+                                {
+                                    <img src="@course.CoverImagePath" alt="@course.Title" onerror="this.src='/images/homePage.jpg'">
+                                }
+                                else
+                                {
+                                    <img src="/images/homePage.jpg" alt="@course.Title">
+                                }
                             </div>
                             <div class="course-content">
                                 <h3 class="course-title">@course.Title</h3>
