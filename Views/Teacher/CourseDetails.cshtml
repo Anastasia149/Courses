@@ -25,7 +25,7 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
-                Аналитика
+                Отзывы
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -222,7 +222,69 @@
         <!-- Analytics Tab -->
         <div class="tab-pane fade" id="analytics" role="tabpanel">
             <div class="analytics-content">
-                <p class="text-muted">Аналитика будет доступна в ближайшее время</p>
+                <h3 class="mb-4">Отзывы студентов</h3>
+                
+                @if (ViewBag.Reviews != null)
+                {
+                    var reviews = ViewBag.Reviews as List<Courses.Models.Review>;
+                    var averageRating = ViewBag.AverageRating as double? ?? 0;
+                    var totalReviews = ViewBag.TotalReviews as int? ?? 0;
+
+                    @if (reviews.Any())
+                    {
+                        <div class="rating-summary mb-4 p-3 bg-light rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4 class="mb-2">Средняя оценка</h4>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="average-rating-large">@averageRating.ToString("F1")</span>
+                                        <div class="stars-inline">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star @(i <= Math.Round(averageRating) ? "active" : "")"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-0"><strong>Всего отзывов:</strong> @totalReviews</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="reviews-list">
+                            <h5 class="mb-3">Все отзывы</h5>
+                            @foreach (var review in reviews)
+                            {
+                                <div class="review-item border-bottom pb-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <strong>@review.User.FullName</strong>
+                                            <div class="stars-inline mt-1">
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <i class="fas fa-star @(i <= review.Rating ? "active" : "")"></i>
+                                                }
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(review.Description))
+                                    {
+                                        <p class="mb-0">@review.Description</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-comments fa-3x mb-3"></i>
+                            <p>Пока нет отзывов от студентов</p>
+                        </div>
+                    }
+                }
             </div>
         </div>
 
@@ -485,6 +547,32 @@
         .empty-state i {
             font-size: 3rem;
             color: #d1d5db;
+        }
+
+        .stars-inline {
+            display: flex;
+            gap: 2px;
+        }
+
+        .stars-inline i {
+            color: #ddd;
+            font-size: 0.9rem;
+        }
+
+        .stars-inline i.active {
+            color: #ffc107;
+        }
+
+        .average-rating-large {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .review-item:last-child {
+            border-bottom: none !important;
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
             margin-bottom: 1rem;
         }
 

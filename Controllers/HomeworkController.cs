@@ -51,11 +51,14 @@ namespace Courses.Controllers
 
             if (homework != null)
             {
-                // Проверяем, можно ли отправить домашнее задание повторно
-                if (homework.Status != HomeworkStatus.Rejected && homework.Status != HomeworkStatus.Cancelled)
+                // Разрешаем обновление задания, если оно было отклонено или отменено
+                // Также разрешаем обновление, если задание было создано автоматически для комментариев (пустой ответ)
+                if (homework.Status != HomeworkStatus.Rejected && 
+                    homework.Status != HomeworkStatus.Cancelled &&
+                    !string.IsNullOrWhiteSpace(homework.Answer))
                 {
                     TempData["Error"] = "Вы не можете отправить домашнее задание повторно, пока оно не отклонено или не отменено.";
-                    return RedirectToAction("CourseDetails", "Student", new { id = lesson.CourseId, lessonId = lessonId });
+                    return RedirectToAction("Lesson", "Student", new { id = lessonId });
                 }
             }
 
@@ -75,10 +78,25 @@ namespace Courses.Controllers
             else
             {
                 // Обновляем существующее домашнее задание
+                // Если задание было создано автоматически для комментариев (пустой ответ), обновляем его
                 homework.Answer = answer;
                 homework.Status = HomeworkStatus.Pending;
                 homework.SubmittedAt = DateTime.UtcNow;
                 homework.Feedback = null;
+                
+                // Удаляем старые файлы, если они есть (при обновлении задания)
+                if (homework.Files != null && homework.Files.Any())
+                {
+                    foreach (var file in homework.Files.ToList())
+                    {
+                        var filePath = Path.Combine(_environment.WebRootPath, file.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                        _context.Remove(file);
+                    }
+                }
             }
 
             // Обработка файлов
@@ -126,7 +144,7 @@ namespace Courses.Controllers
             );
 
             TempData["Success"] = "Домашнее задание успешно отправлено!";
-            return RedirectToAction("CourseDetails", "Student", new { id = lesson.CourseId, lessonId = lessonId });
+            return RedirectToAction("Lesson", "Student", new { id = lessonId });
         }
 
         [HttpPost]
@@ -180,16 +198,19 @@ namespace Courses.Controllers
                 .Include(h => h.Files)
                 .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId);
 
-            if (homework == null || homework.Status == HomeworkStatus.Cancelled)
+            // Не возвращаем задание, если оно отменено или имеет пустой ответ (создано автоматически для комментариев)
+            if (homework == null || 
+                homework.Status == HomeworkStatus.Cancelled || 
+                string.IsNullOrWhiteSpace(homework.Answer))
                 return Json(null);
 
             return Json(new
             {
                 homework.Id,
                 homework.Answer,
-                homework.Status,
+                Status = homework.Status.ToString(),
                 homework.Feedback,
-                homework.SubmittedAt,
+                SubmittedAt = homework.SubmittedAt.ToString("o"), // ISO 8601 format
                 files = homework.Files.Select(f => new
                 {
                     f.Id,
@@ -222,7 +243,8 @@ namespace Courses.Controllers
                 return Forbid();
             }
 
-            var filePath = Path.Combine(_environment.WebRootPath, "uploads", "homework", file.FilePath);
+            // Путь к файлу уже содержит полный относительный путь
+            var filePath = Path.Combine(_environment.WebRootPath, file.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
             if (!System.IO.File.Exists(filePath))
             {
                 return NotFound();

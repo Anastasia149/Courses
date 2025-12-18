@@ -2,36 +2,99 @@ $(document).ready(function() {
     if (typeof lessonIdForHomework === 'undefined') return;
     let currentHomeworkId = null;
     $.get('/Homework/GetHomework', { lessonId: lessonIdForHomework }, function(homework) {
-        if (homework) {
+        // Проверяем, что задание существует, не отменено и имеет непустой ответ
+        // Задания с пустым ответом (созданные автоматически для комментариев) не считаются отправленными
+        if (homework && homework.status !== 'Cancelled' && homework.answer && homework.answer.trim() !== '' && homework.status !== 'Cancelled') {
             currentHomeworkId = homework.id;
-            // Показываем отправленное задание
-            $('#homeworkAnswer').html('<strong>Ответ:</strong><br>' + homework.answer);
+            
+            // Отображаем статус
+            var statusBadge = $('#statusBadge');
+            statusBadge.removeClass('pending approved rejected');
+            
+            var statusText = '';
+            var statusClass = '';
+            switch(homework.status) {
+                case 'Pending':
+                    statusText = 'Ожидает проверки';
+                    statusClass = 'pending';
+                    break;
+                case 'Approved':
+                    statusText = 'Принято';
+                    statusClass = 'approved';
+                    break;
+                case 'Rejected':
+                    statusText = 'Требует доработки';
+                    statusClass = 'rejected';
+                    break;
+                default:
+                    statusText = 'Ожидает проверки';
+                    statusClass = 'pending';
+            }
+            statusBadge.addClass(statusClass).text(statusText);
+            
+            // Отображаем отзыв преподавателя
+            if (homework.feedback && homework.feedback.trim() !== '') {
+                $('#instructorFeedback').text(homework.feedback);
+                $('#instructorFeedbackSection').show();
+            } else {
+                $('#instructorFeedbackSection').hide();
+            }
+            
+            // Отображаем отправленную работу
+            $('#submittedWorkAnswer').text(homework.answer || '');
+            
+            // Отображаем файлы
             if (homework.files && homework.files.length > 0) {
                 var filesHtml = '';
                 homework.files.forEach(function(file) {
-                    filesHtml += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+                    filesHtml += '<div class="file-attachment">' +
+                        '<i class="fas fa-paperclip"></i>' +
                         '<a href="/Homework/DownloadFile/' + file.id + '" target="_blank">' + file.fileName + '</a>' +
-                        '<span class="badge bg-secondary rounded-pill">' + formatFileSize(file.fileSize) + '</span>' +
-                        '</li>';
+                        '</div>';
                 });
-                $('#filesList').html(filesHtml);
-                $('#homeworkFiles').show();
+                $('#submittedFiles').html(filesHtml).show();
             } else {
-                $('#homeworkFiles').hide();
+                $('#submittedFiles').hide();
             }
-            if (homework.feedback) {
-                $('#homeworkFeedback').html('<strong>Комментарий преподавателя:</strong><br>' + homework.feedback).show();
-            } else {
-                $('#homeworkFeedback').hide();
+            
+            // Отображаем дату отправки
+            if (homework.submittedAt) {
+                var date = new Date(homework.submittedAt);
+                var dateStr = date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                var timeStr = date.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                $('#submissionDateText').text('Отправлено: ' + dateStr + ', ' + timeStr);
             }
+            
             $('#submittedHomework').show();
-            $('#homeworkForm').hide();
-            // Кнопка отмены всегда видна, если есть домашка
-            $('#cancelButton').show();
+            
+            // Если задание принято или ожидает проверки, скрываем форму
+            if (homework.status === 'Approved' || homework.status === 'Pending') {
+                $('#homeworkForm').hide();
+                $('#cancelButton').show();
+            } else if (homework.status === 'Rejected') {
+                // Если отклонено, показываем форму для повторной отправки
+                // Заполняем форму данными из отправленного задания
+                $('#homeworkForm').show();
+                $('#answer').val(homework.answer || '');
+                $('#cancelButton').show();
+            } else {
+                // Если статус Cancelled или другой - показываем форму
+                $('#submittedHomework').hide();
+                $('#homeworkForm').show();
+                $('#cancelButton').hide();
+            }
         } else {
+            // Задания нет, оно отменено или пустое - показываем форму
             $('#submittedHomework').hide();
             $('#homeworkForm').show();
-            // Кнопка отмены скрыта, если домашки нет
             $('#cancelButton').hide();
         }
     });

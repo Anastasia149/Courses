@@ -19,72 +19,84 @@
         
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
+            @{
+                var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+                var isProfilePage = currentController == "Home" && currentAction == "Student";
+            }
             <div class="sidebar-header">
-                <div class="user-profile">
-                    @{
-                        var user = ViewBag.User as Courses.Models.User;
-                        // ВСЕГДА используем placeholder, если AvatarPath пустой или невалидный
-                        var avatarPath = "/images/avatar-placeholder.png";
-                        var hasValidAvatar = false;
-                        
-                        if (user != null && !string.IsNullOrEmpty(user.Id) && !string.IsNullOrWhiteSpace(user.AvatarPath))
-                        {
-                            // Проверяем, что путь начинается с правильного префикса
-                            if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
-                                user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                @if (isProfilePage)
+                {
+                    <div class="logo">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>LearnHub</span>
+                    </div>
+                    <div class="dashboard-title">Панель студента</div>
+                }
+                else
+                {
+                    <div class="user-profile">
+                        @{
+                            var user = ViewBag.User as Courses.Models.User;
+                            // ВСЕГДА используем placeholder, если AvatarPath пустой или невалидный
+                            var avatarPath = "/images/avatar-placeholder.png";
+                            var hasValidAvatar = false;
+                            
+                            if (user != null && !string.IsNullOrEmpty(user.Id) && !string.IsNullOrWhiteSpace(user.AvatarPath))
                             {
-                                // Получаем имя файла из пути
-                                var fileName = System.IO.Path.GetFileName(user.AvatarPath);
-                                if (!string.IsNullOrEmpty(fileName))
+                                // Проверяем, что путь начинается с правильного префикса
+                                if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                                    user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
                                 {
-                                    // Строгая проверка: имя файла должно начинаться с ID пользователя и подчеркивания
-                                    // Формат: {userId}_{timestamp}.ext или {userId}_{ticks}.ext
-                                    var expectedPrefix = user.Id + "_";
-                                    if (fileName.StartsWith(expectedPrefix, StringComparison.Ordinal))
+                                    // Получаем имя файла из пути
+                                    var fileName = System.IO.Path.GetFileName(user.AvatarPath);
+                                    if (!string.IsNullOrEmpty(fileName))
                                     {
-                                        // Дополнительная проверка: после ID должно идти подчеркивание и далее символы (не пустая строка)
-                                        var afterPrefix = fileName.Substring(expectedPrefix.Length);
-                                        if (!string.IsNullOrEmpty(afterPrefix) && afterPrefix.Length > 0)
+                                        // Строгая проверка: имя файла должно начинаться с ID пользователя и подчеркивания
+                                        // Формат: {userId}_{timestamp}.ext или {userId}_{ticks}.ext
+                                        var expectedPrefix = user.Id + "_";
+                                        if (fileName.StartsWith(expectedPrefix, StringComparison.Ordinal))
                                         {
-                                            avatarPath = user.AvatarPath;
-                                            hasValidAvatar = true;
+                                            // Дополнительная проверка: после ID должно идти подчеркивание и далее символы (не пустая строка)
+                                            var afterPrefix = fileName.Substring(expectedPrefix.Length);
+                                            if (!string.IsNullOrEmpty(afterPrefix) && afterPrefix.Length > 0)
+                                            {
+                                                avatarPath = user.AvatarPath;
+                                                hasValidAvatar = true;
+                                            }
                                         }
                                     }
                                 }
                             }
+                            
+                            // Если аватар невалидный, принудительно используем placeholder
+                            if (!hasValidAvatar)
+                            {
+                                avatarPath = "/images/avatar-placeholder.png";
+                            }
                         }
-                        
-                        // Если аватар невалидный, принудительно используем placeholder
-                        if (!hasValidAvatar)
+                        @if (hasValidAvatar)
                         {
-                            avatarPath = "/images/avatar-placeholder.png";
+                            <img src="@avatarPath?v=@DateTime.Now.Ticks" alt="Аватар" class="profile-avatar" 
+                                 onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="profile-avatar-placeholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                            </div>
                         }
-                    }
-                    @if (hasValidAvatar)
-                    {
-                        <img src="@avatarPath?v=@DateTime.Now.Ticks" alt="Аватар" class="profile-avatar" 
-                             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="profile-avatar-placeholder" style="display: none;">
-                            <i class="fas fa-user"></i>
+                        else
+                        {
+                            <div class="profile-avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        }
+                        <div class="profile-info">
+                            <div class="profile-name">@(user?.FullName ?? "Студент")</div>
+                            <div class="profile-role">Студент</div>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="profile-avatar-placeholder">
-                            <i class="fas fa-user"></i>
-                        </div>
-                    }
-                    <div class="profile-info">
-                        <div class="profile-name">@(user?.FullName ?? "Студент")</div>
-                        <div class="profile-role">Студент</div>
                     </div>
-                </div>
+                }
             </div>
             <nav class="sidebar-nav">
-                @{
-                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
-                }
                 <a asp-controller="Student" asp-action="Course" class="nav-item @(currentController == "Student" && currentAction == "Course" ? "active" : "")">
                     <i class="fas fa-book"></i>
                     <span>Моё обучение</span>
@@ -195,6 +207,26 @@
     .sidebar-header {
         padding: 2rem 1.5rem;
         border-bottom: 1px solid #e5e7eb;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .logo i {
+        color: #1976d2;
+    }
+
+    .dashboard-title {
+        font-size: 0.875rem;
+        color: #666;
+        font-weight: 500;
     }
 
     .user-profile {

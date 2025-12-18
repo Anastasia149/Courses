@@ -1,63 +1,527 @@
 @model Courses.ViewModels.StudentLessonViewModel
 <script>
     var lessonIdForHomework = @Model.Id;
-    </script>
-<div class="homework-submission-container mt-4">
-    <h4>Домашнее задание</h4>
-    <div class="card">
-        <div class="card-body">
-            @if (TempData["Success"] != null)
-            {
-                <div class="alert alert-success">
-                    @TempData["Success"]
-                </div>
-            }
-            @if (TempData["Error"] != null)
-            {
-                <div class="alert alert-danger">
-                    @TempData["Error"]
-                </div>
-            }
+</script>
 
-            <div id="homeworkStatus" class="mb-3">
-                <!-- Статус будет загружен через AJAX -->
-            </div>
+<div class="homework-submission-container">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success mb-3">
+            @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger mb-3">
+            @TempData["Error"]
+        </div>
+    }
 
-            <div id="submittedHomework" class="mb-4" style="display: none;">
-                <h5>Отправленное задание:</h5>
-                <div class="card">
-                    <div class="card-body">
-                        <div id="homeworkAnswer" class="mb-3"></div>
-                        <div id="homeworkFiles" class="mb-3">
-                            <h6>Прикрепленные файлы:</h6>
-                            <ul class="list-group" id="filesList"></ul>
-                        </div>
-                        <div id="homeworkFeedback" class="alert alert-info" style="display: none;"></div>
-                    </div>
-                </div>
-            </div>
+    <div id="homeworkStatus" class="mb-3">
+        <!-- Статус будет загружен через AJAX -->
+    </div>
 
-            <form id="homeworkForm" asp-controller="Homework" asp-action="Submit" method="post" enctype="multipart/form-data">
-                <input type="hidden" name="lessonId" value="@Model.Id" />
-                <div class="mb-3">
-                    <label for="answer" class="form-label">Ваш ответ:</label>
-                    <textarea class="form-control" id="answer" name="answer" rows="5" required></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="files" class="form-label">Прикрепить файлы:</label>
-                    <input type="file" class="form-control" id="files" name="files" multiple>
-                    <div class="form-text">Можно выбрать несколько файлов. Максимальный размер каждого файла: 10MB</div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" id="submitButton">
-                        <i class="fas fa-paper-plane"></i> Отправить задание
-                    </button>
-                </div>
-            </form>
-            <button type="button" class="btn btn-danger mt-2" id="cancelButton" style="display: none;">
-                <i class="fas fa-times"></i> Отменить отправку
-            </button>
+    <div id="submittedHomework" class="submitted-homework-container mb-4" style="display: none;">
+        <!-- Status Badge -->
+        <div class="homework-status-section mb-3">
+            <label class="section-label">Статус</label>
+            <div id="statusBadge" class="status-badge"></div>
+        </div>
+
+        <!-- Instructor's Feedback -->
+        <div id="instructorFeedbackSection" class="feedback-section mb-4" style="display: none;">
+            <label class="section-label">Комментарий преподавателя:</label>
+            <div class="feedback-box" id="instructorFeedback"></div>
+        </div>
+
+        <!-- Your Submitted Work -->
+        <div class="submitted-work-section mb-4">
+            <label class="section-label">Ваша отправленная работа:</label>
+            <div class="submitted-work-box" id="submittedWorkAnswer"></div>
+            
+            <!-- Submitted Files -->
+            <div id="submittedFiles" class="submitted-files mt-3" style="display: none;"></div>
+        </div>
+
+        <!-- Submission Date -->
+        <div class="submission-date">
+            <span id="submissionDateText"></span>
         </div>
     </div>
+
+    <form id="homeworkForm" asp-controller="Homework" asp-action="Submit" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="lessonId" value="@Model.Id" />
+        
+        <!-- Text Response Section -->
+        <div class="form-section mb-4">
+            <label for="answer" class="form-section-label">Текстовый ответ:</label>
+            <textarea class="form-control homework-textarea" id="answer" name="answer" rows="8" placeholder="Введите ваш ответ здесь..."></textarea>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="form-section mb-4">
+            <label class="form-section-label">Загрузка файла:</label>
+            <div class="file-upload-zone" id="fileUploadZone">
+                <input type="file" class="file-input" id="files" name="files" multiple style="display: none;">
+                <div class="file-upload-content">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p class="upload-text">
+                        Перетащите файл сюда или <a href="javascript:void(0)" class="upload-link" id="chooseFileLink">выберите файл</a>
+                    </p>
+                    <p class="upload-hint">Максимальный размер файла: 10 MB</p>
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-submit-homework" id="submitButton">
+            Отправить на проверку
+        </button>
+    </form>
+    
+    <button type="button" class="btn btn-danger mt-2" id="cancelButton" style="display: none;">
+        <i class="fas fa-times"></i> Отменить отправку
+    </button>
 </div>
 
+<style>
+    .homework-submission-container {
+        background: #fff;
+        padding: 0;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section-label {
+        display: block;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .homework-textarea {
+        width: 100%;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 1rem;
+        line-height: 1.5;
+        background-color: #f9fafb;
+        resize: vertical;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .homework-textarea:focus {
+        outline: none;
+        border-color: #1976d2;
+        background-color: #fff;
+    }
+
+    .file-upload-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 3rem 2rem;
+        text-align: center;
+        background-color: #f9fafb;
+        transition: all 0.2s ease;
+        position: relative;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .file-upload-zone.drag-over {
+        border-color: #1976d2;
+        background-color: #e3f2fd;
+    }
+
+    .file-upload-content {
+        pointer-events: none;
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: #9ca3af;
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: #374151;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-link {
+        color: #1976d2;
+        text-decoration: none;
+        cursor: pointer;
+        pointer-events: auto;
+    }
+
+    .upload-link:hover {
+        text-decoration: underline;
+        color: #1565c0;
+    }
+
+    .upload-hint {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin: 0;
+    }
+
+    .file-list {
+        margin-top: 1rem;
+        width: 100%;
+        text-align: left;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+
+    .file-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .file-item-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .file-item-icon {
+        color: #1976d2;
+        font-size: 1.25rem;
+    }
+
+    .file-item-name {
+        color: #1a1a1a;
+        font-size: 0.875rem;
+    }
+
+    .file-item-size {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .file-item-remove {
+        color: #dc2626;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+    }
+
+    .file-item-remove:hover {
+        background-color: #fee2e2;
+    }
+
+    .btn-submit-homework {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        background-color: #1a1a1a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-submit-homework:hover {
+        background-color: #2d2d2d;
+    }
+
+    .btn-submit-homework:disabled {
+        background-color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    /* Submitted Homework Styles */
+    .submitted-homework-container {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .homework-status-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-label {
+        display: block;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .status-badge.pending {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-badge.approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.rejected {
+        background-color: #fed7aa;
+        color: #9a3412;
+    }
+
+    .feedback-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .feedback-box,
+    .submitted-work-box {
+        background-color: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 1rem;
+        color: #374151;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 60px;
+    }
+
+    .submitted-files {
+        margin-top: 1rem;
+    }
+
+    .file-attachment {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        color: #1a1a1a;
+    }
+
+    .file-attachment i {
+        color: #6b7280;
+    }
+
+    .file-attachment a {
+        color: #1976d2;
+        text-decoration: none;
+    }
+
+    .file-attachment a:hover {
+        text-decoration: underline;
+    }
+
+    .submission-date {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+</style>
+
+<script>
+    // Инициализация загрузки файлов
+    function initFileUpload() {
+        console.log('Инициализация загрузки файлов...');
+        const fileInput = document.getElementById('files');
+        const fileUploadZone = document.getElementById('fileUploadZone');
+        const chooseFileLink = document.getElementById('chooseFileLink');
+        const fileList = document.getElementById('fileList');
+        
+        console.log('Элементы найдены:', {
+            fileInput: !!fileInput,
+            fileUploadZone: !!fileUploadZone,
+            chooseFileLink: !!chooseFileLink,
+            fileList: !!fileList
+        });
+        
+        if (!fileInput || !fileUploadZone || !chooseFileLink || !fileList) {
+            // Если элементы еще не загружены, попробуем через 100мс
+            console.log('Элементы не найдены, повторная попытка через 100мс...');
+            setTimeout(initFileUpload, 100);
+            return;
+        }
+        
+        console.log('Инициализация успешна, настраиваем обработчики событий...');
+
+        let selectedFiles = [];
+
+        // Клик по ссылке "выберите файл"
+        chooseFileLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Клик по ссылке выбора файла');
+            if (fileInput) {
+                console.log('Открываем диалог выбора файла');
+                fileInput.click();
+            } else {
+                console.error('fileInput не найден');
+            }
+            return false;
+        });
+
+        // Клик по всей зоне загрузки (но не по элементам внутри)
+        fileUploadZone.addEventListener('click', function(e) {
+            // Если клик не по ссылке и не по элементу списка файлов
+            if (e.target !== chooseFileLink && 
+                !e.target.closest('.file-item') && 
+                e.target !== fileInput) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (fileInput) {
+                    fileInput.click();
+                }
+            }
+        });
+
+        // Обработка выбора файлов
+        fileInput.addEventListener('change', function(e) {
+            handleFiles(e.target.files);
+        });
+
+        // Drag and Drop
+        fileUploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        });
+
+        fileUploadZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+        });
+
+        fileUploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Файл "' + file.name + '" превышает максимальный размер 10 MB');
+                    continue;
+                }
+                selectedFiles.push(file);
+                addFileToList(file);
+            }
+            updateFileInput();
+        }
+
+        function addFileToList(file) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'file-item-info';
+            
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-file-alt file-item-icon';
+            fileInfo.appendChild(icon);
+            
+            const name = document.createElement('span');
+            name.className = 'file-item-name';
+            name.textContent = file.name;
+            fileInfo.appendChild(name);
+            
+            const size = document.createElement('span');
+            size.className = 'file-item-size';
+            size.textContent = formatFileSize(file.size);
+            fileInfo.appendChild(size);
+            
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'file-item-remove';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.addEventListener('click', function() {
+                selectedFiles = selectedFiles.filter(f => f !== file);
+                fileItem.remove();
+                updateFileInput();
+            });
+            
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeBtn);
+            fileList.appendChild(fileItem);
+        }
+
+        function updateFileInput() {
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(function(file) {
+                dataTransfer.items.add(file);
+            });
+            fileInput.files = dataTransfer.files;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Обработка отправки формы
+        const homeworkForm = document.getElementById('homeworkForm');
+        if (homeworkForm) {
+            homeworkForm.addEventListener('submit', function(e) {
+                const answerText = document.getElementById('answer');
+                if (selectedFiles.length === 0 && (!answerText || !answerText.value.trim())) {
+                    e.preventDefault();
+                    alert('Пожалуйста, введите ответ или прикрепите файл.');
+                    return false;
+                }
+            });
+        }
+    }
+
+    // Запускаем инициализацию после загрузки DOM
+    function startInit() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM загружен, запускаем инициализацию...');
+                initFileUpload();
+            });
+        } else {
+            // DOM уже загружен
+            console.log('DOM уже загружен, запускаем инициализацию...');
+            // Небольшая задержка для гарантии, что все элементы отрендерены
+            setTimeout(initFileUpload, 50);
+        }
+    }
+    
+    startInit();
+</script>

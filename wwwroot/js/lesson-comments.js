@@ -10,17 +10,23 @@ $(function() {
             var html = '';
             
             if (comments.length === 0) {
-                html = '<div class="text-muted">Пока нет комментариев</div>';
+                html = '<div class="text-muted text-center py-3">Пока нет комментариев. Будьте первым!</div>';
             } else {
                 comments.forEach(function(c) {
-                    html += `<div class="mb-2 border rounded p-2">
-                        <b>${c.userName}</b> <span class="text-muted" style="font-size:0.9em">${new Date(c.createdAt).toLocaleString()}</span><br>
-                        ${escapeHtml(c.text)}
-                        <div>`;
+                    html += `<div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(c.userName)}</span>
+                            <span class="comment-date">${new Date(c.createdAt).toLocaleString('ru-RU')}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(c.text)}</div>`;
                     if (c.userId === currentUserId || isTeacher) {
-                        html += `<a href="#" class="delete-comment-link text-danger me-2" data-id="${c.id}">Удалить</a>`;
+                        html += `<div class="comment-actions">
+                            <a href="#" class="delete-comment-link text-danger" data-id="${c.id}">
+                                <i class="fas fa-trash me-1"></i>Удалить
+                            </a>
+                        </div>`;
                     }
-                    html += `</div></div>`;
+                    html += `</div>`;
                 });
             }
             

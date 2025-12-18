@@ -38,8 +38,8 @@ namespace Courses.Controllers
                 if (user != null)
                 {
                     if (await _userManager.IsInRoleAsync(user, "Teacher"))
-                    {
-                        return RedirectToAction("Index", "Teacher");
+                {
+                    return RedirectToAction("Index", "Teacher");
                     }
                     else if (await _userManager.IsInRoleAsync(user, "Student"))
                     {

@@ -49,10 +49,15 @@
                                 </div>
                             </div>
 
-                            <!-- Action Button -->
-                            <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn-continue">
-                                Продолжить
-                            </a>
+                            <!-- Action Buttons -->
+                            <div class="course-actions d-flex gap-2">
+                                <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn-continue flex-grow-1">
+                                    Продолжить
+                                </a>
+                                <a asp-controller="Review" asp-action="Index" asp-route-courseId="@course.CourseId" class="btn-reviews">
+                                    <i class="fas fa-star me-1"></i>Отзывы
+                                </a>
+                            </div>
                         </div>
                     </div>
                 }
@@ -192,9 +197,14 @@
         transition: width 0.3s ease;
     }
 
+    .course-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
     .btn-continue {
         display: inline-block;
-        width: 100%;
+        flex: 1;
         padding: 0.75rem 1.5rem;
         background-color: #1a1a1a;
         color: #fff;
@@ -209,6 +219,26 @@
 
     .btn-continue:hover {
         background-color: #2d2d2d;
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .btn-reviews {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: #1976d2;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-reviews:hover {
+        background-color: #1565c0;
         color: #fff;
         text-decoration: none;
         transform: translateY(-1px);

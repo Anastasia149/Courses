@@ -26,18 +26,17 @@ namespace Courses.Controllers
             var userId = _userManager.GetUserId(User);
             var isTeacher = User.IsInRole("Teacher");
             
-            // Получаем homeworkId для текущего студента и урока
-            var homework = await _context.Homeworks
-                .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId && h.Status != HomeworkStatus.Cancelled);
-            
-            if (homework == null)
-            {
-                return Json(new { comments = new object[0], currentUserId = userId, isTeacher });
-            }
+            // Получаем все комментарии к урокам (ко всем заданиям этого урока)
+            // Это позволяет видеть комментарии всех студентов к уроку
+            var allHomeworksForLesson = await _context.Homeworks
+                .Where(h => h.LessonId == lessonId && h.Status != HomeworkStatus.Cancelled)
+                .Select(h => h.Id)
+                .ToListAsync();
 
             var comments = await _context.HomeworkComments
                 .Include(c => c.User)
-                .Where(c => c.HomeworkId == homework.Id)
+                .Include(c => c.Homework)
+                .Where(c => allHomeworksForLesson.Contains(c.HomeworkId))
                 .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
 
@@ -70,9 +69,25 @@ namespace Courses.Controllers
             var homework = await _context.Homeworks
                 .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId && h.Status != HomeworkStatus.Cancelled);
 
+            // Если задания нет, создаем пустое задание для возможности комментирования
             if (homework == null)
             {
-                return BadRequest("Задание не найдено. Сначала отправьте задание.");
+                var lesson = await _context.Lessons.FindAsync(lessonId);
+                if (lesson == null)
+                {
+                    return BadRequest("Урок не найден.");
+                }
+
+                homework = new Homework
+                {
+                    LessonId = lessonId,
+                    StudentId = userId,
+                    Answer = "", // Пустой ответ
+                    Status = HomeworkStatus.Pending,
+                    SubmittedAt = DateTime.UtcNow
+                };
+                _context.Homeworks.Add(homework);
+                await _context.SaveChangesAsync();
             }
 
             var comment = new HomeworkComment

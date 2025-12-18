@@ -126,7 +126,7 @@ namespace Courses.Controllers
             return RedirectToAction(nameof(Course));
         }
 
-        public async Task<IActionResult> CourseDetails(int id, int? lessonId = null)
+        public async Task<IActionResult> CourseDetails(int id)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _userManager.GetUserAsync(User);
@@ -166,6 +166,10 @@ namespace Courses.Controllers
                 .Include(uc => uc.Course)
                     .ThenInclude(c => c.Teacher)
                 .Include(uc => uc.Course)
+                    .ThenInclude(c => c.Modules)
+                        .ThenInclude(m => m.Lessons)
+                            .ThenInclude(l => l.Homeworks)
+                .Include(uc => uc.Course)
                     .ThenInclude(c => c.Lessons)
                         .ThenInclude(l => l.Homeworks)
                 .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CourseId == id);
@@ -175,41 +179,179 @@ namespace Courses.Controllers
                 return NotFound();
             }
 
+            var courseData = userCourse.Course;
+            var allLessons = courseData.Lessons.OrderBy(l => l.Order).ToList();
+            var completedLessonsCount = allLessons.Count(l => 
+                l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved));
+            var progressPercentage = allLessons.Count > 0 
+                ? (int)Math.Round((double)completedLessonsCount / allLessons.Count * 100) 
+                : 0;
+
+            // Получаем отзывы для курса
+            var reviews = await _context.Reviews
+                .Include(r => r.User)
+                .Where(r => r.CourseId == id)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+            var userReview = reviews.FirstOrDefault(r => r.UserId == userId);
+
+            // Группируем уроки по модулям
+            var modules = courseData.Modules
+                .OrderBy(m => m.OrderNumber)
+                .Select(m => new StudentModuleViewModel
+                {
+                    Id = m.Id,
+                    Title = m.Title,
+                    Description = m.Description,
+                    OrderNumber = m.OrderNumber,
+                    Lessons = m.Lessons
+                        .OrderBy(l => l.Order)
+                        .Select(l => new StudentLessonViewModel
+                        {
+                            Id = l.Id,
+                            Title = l.Title,
+                            Description = l.Content,
+                            Order = l.Order,
+                            ModuleId = l.ModuleId,
+                            HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
+                            HomeworkStatus = l.Homeworks
+                                .Where(h => h.StudentId == userId)
+                                .Select(h => h.Status)
+                                .FirstOrDefault(),
+                            IsCompleted = l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved),
+                            IsViewed = l.Homeworks.Any(h => h.StudentId == userId),
+                            DueDate = null, // DueDate не реализован в модели Homework
+                            Files = GetLessonFiles(l.Id)
+                        })
+                        .ToList(),
+                    TotalLessons = m.Lessons.Count,
+                    CompletedLessons = m.Lessons.Count(l => 
+                        l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved))
+                })
+                .ToList();
+
+            // Уроки без модуля
+            var lessonsWithoutModule = allLessons
+                .Where(l => l.ModuleId == null)
+                .Select(l => new StudentLessonViewModel
+                {
+                    Id = l.Id,
+                    Title = l.Title,
+                    Description = l.Content,
+                    Order = l.Order,
+                    ModuleId = null,
+                    HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
+                    HomeworkStatus = l.Homeworks
+                        .Where(h => h.StudentId == userId)
+                        .Select(h => h.Status)
+                        .FirstOrDefault(),
+                    IsCompleted = l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved),
+                    IsViewed = l.Homeworks.Any(h => h.StudentId == userId),
+                    DueDate = null, // DueDate не реализован в модели Homework
+                    Files = GetLessonFiles(l.Id)
+                })
+                .ToList();
+
             var course = new StudentCourseDetailsViewModel
             {
                 CourseId = userCourse.CourseId,
-                Title = userCourse.Course.Title,
-                Description = userCourse.Course.Description,
-                TeacherName = userCourse.Course.Teacher.FullName,
-                Lessons = userCourse.Course.Lessons
-                    .OrderBy(l => l.Order)
-                    .Select(l => new StudentLessonViewModel
-                    {
-                        Id = l.Id,
-                        Title = l.Title,
-                        Description = l.Content,
-                        Order = l.Order,
-                        HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
-                        HomeworkStatus = l.Homeworks
-                            .Where(h => h.StudentId == userId)
-                            .Select(h => h.Status)
-                            .FirstOrDefault()
-                    })
-                    .ToList()
+                Title = courseData.Title,
+                Description = courseData.Description,
+                TeacherName = courseData.Teacher.FullName,
+                CoverImagePath = courseData.CoverImagePath,
+                AverageRating = averageRating,
+                TotalReviews = reviews.Count,
+                ProgressPercentage = progressPercentage,
+                Modules = modules,
+                Lessons = lessonsWithoutModule
             };
 
-            // Добавляем файлы для каждого урока
-            foreach (var lesson in course.Lessons)
-            {
-                lesson.Files = GetLessonFiles(lesson.Id);
-            }
-
-            // Выбор урока только если явно указан lessonId
-            if (lessonId.HasValue)
-                course.SelectedLesson = course.Lessons.FirstOrDefault(l => l.Id == lessonId.Value);
-            // Иначе SelectedLesson остается null - показываем только список уроков
+            ViewBag.Reviews = reviews;
+            ViewBag.AverageRating = averageRating;
+            ViewBag.TotalReviews = reviews.Count;
+            ViewBag.HasUserReview = userReview != null;
+            ViewBag.UserReview = userReview;
 
             return View(course);
+        }
+
+        public async Task<IActionResult> Lesson(int id)
+        {
+            var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.GetUserAsync(User);
+            
+            ViewBag.User = user;
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
+
+            // Получаем урок с курсом
+            var lesson = await _context.Lessons
+                .Include(l => l.Course)
+                    .ThenInclude(c => c.Teacher)
+                .Include(l => l.Module)
+                .Include(l => l.Homeworks)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (lesson == null)
+            {
+                return NotFound();
+            }
+
+            // Проверяем, записан ли студент на курс
+            var isEnrolled = await _context.UserCourses
+                .AnyAsync(uc => uc.UserId == userId && uc.CourseId == lesson.CourseId);
+
+            if (!isEnrolled)
+            {
+                TempData["ErrorMessage"] = "Вы должны быть записаны на курс, чтобы просматривать уроки.";
+                return RedirectToAction("Course");
+            }
+
+            // Получаем домашнее задание студента для этого урока (исключаем отмененные и пустые)
+            // Пустые задания (созданные автоматически для комментариев) не считаются отправленными
+            var homework = lesson.Homeworks
+                .Where(h => h.StudentId == userId && 
+                           h.Status != HomeworkStatus.Cancelled &&
+                           !string.IsNullOrWhiteSpace(h.Answer))
+                .OrderByDescending(h => h.SubmittedAt)
+                .FirstOrDefault();
+
+            // Получаем предыдущий и следующий уроки
+            var allLessons = await _context.Lessons
+                .Where(l => l.CourseId == lesson.CourseId)
+                .OrderBy(l => l.Order)
+                .ToListAsync();
+
+            var currentIndex = allLessons.FindIndex(l => l.Id == id);
+            var previousLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
+            var nextLesson = currentIndex < allLessons.Count - 1 ? allLessons[currentIndex + 1] : null;
+
+            var lessonViewModel = new StudentLessonViewModel
+            {
+                Id = lesson.Id,
+                Title = lesson.Title,
+                Description = lesson.Content,
+                Order = lesson.Order,
+                ModuleId = lesson.ModuleId,
+                HasHomework = true, // Всегда показываем возможность отправки задания
+                HomeworkStatus = homework != null ? homework.Status : HomeworkStatus.Pending,
+                IsCompleted = homework?.Status == HomeworkStatus.Approved,
+                // IsViewed = true только если задание реально отправлено (не пустое)
+                IsViewed = homework != null && 
+                          homework.Status != HomeworkStatus.Cancelled && 
+                          !string.IsNullOrWhiteSpace(homework.Answer),
+                DueDate = null,
+                Files = GetLessonFiles(lesson.Id)
+            };
+
+            ViewBag.CourseId = lesson.CourseId;
+            ViewBag.CourseTitle = lesson.Course.Title;
+            ViewBag.PreviousLessonId = previousLesson?.Id;
+            ViewBag.NextLessonId = nextLesson?.Id;
+            ViewBag.ModuleTitle = lesson.Module?.Title;
+
+            return View(lessonViewModel);
         }
 
         private List<LessonFileViewModel> GetLessonFiles(int lessonId)

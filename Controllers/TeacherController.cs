@@ -199,6 +199,15 @@
                     .Where(uc => uc.CourseId == id)
                     .ToListAsync();
 
+                // Получаем отзывы для курса
+                var reviews = await _context.Reviews
+                    .Include(r => r.User)
+                    .Where(r => r.CourseId == id)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+
+                var averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+
                 var model = new CourseDetailsViewModel
                 {
                     Course = selectedCourse,
@@ -210,6 +219,10 @@
 
                 // Передаем информацию о датах регистрации
                 ViewBag.Enrollments = enrolledUsers.ToDictionary(uc => uc.UserId, uc => uc.EnrollmentDate);
+                // Передаем отзывы для аналитики
+                ViewBag.Reviews = reviews;
+                ViewBag.AverageRating = averageRating;
+                ViewBag.TotalReviews = reviews.Count;
 
                 return View("~/Views/Teacher/CourseDetails.cshtml", model);
             }
