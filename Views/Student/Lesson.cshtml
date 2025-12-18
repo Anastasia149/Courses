@@ -96,13 +96,16 @@
             </div>
         }
         
-        <!-- Homework Section -->
-        <div class="homework-section mb-4">
-            <h5 class="section-subtitle mb-3">
-                <i class="fas fa-tasks me-2"></i>Домашнее задание
-            </h5>
-            @await Html.PartialAsync("_HomeworkSubmission", Model)
-        </div>
+        <!-- Homework Section (only for assignments and video) -->
+        @if (ViewBag.LessonType == Courses.Models.LessonType.Assignment || ViewBag.LessonType == Courses.Models.LessonType.Video)
+        {
+            <div class="homework-section mb-4">
+                <h5 class="section-subtitle mb-3">
+                    <i class="fas fa-tasks me-2"></i>Домашнее задание
+                </h5>
+                @await Html.PartialAsync("_HomeworkSubmission", Model)
+            </div>
+        }
 
         <!-- Comments Section -->
         <div class="comments-section">

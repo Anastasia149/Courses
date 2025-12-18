@@ -78,6 +78,25 @@
                     </div>
                 </div>
 
+                <!-- Lesson Type -->
+                <div class="form-group mb-4">
+                    <label asp-for="Type" class="form-label">
+                        Тип урока <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="Type" class="form-select">
+                        <option value="0">Лекция</option>
+                        <option value="1">Сообщение</option>
+                        <option value="2">Задание</option>
+                        <option value="3">Видео</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        <strong>Лекция/Сообщение:</strong> студенты могут только комментировать и скачивать материалы<br/>
+                        <strong>Задание:</strong> студенты могут отправлять файлы для проверки преподавателем<br/>
+                        <strong>Видео:</strong> студенты могут отправлять задания, преподаватель может загружать только видео
+                    </small>
+                    <span asp-validation-for="Type" class="text-danger"></span>
+                </div>
+
                 <!-- Content -->
                 <div class="form-group mb-4">
                     <label asp-for="Content" class="form-label">
@@ -103,11 +122,11 @@
                 <div class="form-group mb-4">
                     <label class="form-label">Прикрепленные материалы</label>
                     <label for="attachmentsInput" class="file-upload-area" id="attachmentsUploadArea">
-                        <input type="file" name="Attachments" id="attachmentsInput" form="lessonForm" class="d-none" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />
+                        <input type="file" name="Attachments" id="attachmentsInput" form="lessonForm" class="d-none" multiple />
                         <div class="upload-placeholder">
                             <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
                             <p class="mb-1">Нажмите для загрузки или перетащите файлы</p>
-                            <p class="text-muted small">PDF, DOC, DOCX, TXT, JPG, JPEG, PNG</p>
+                            <p class="text-muted small" id="fileTypesHint">PDF, DOC, DOCX, TXT, JPG, JPEG, PNG</p>
                         </div>
                         <div id="attachmentsPreview" class="attachments-preview"></div>
                     </label>
@@ -154,8 +173,43 @@
             // Синхронизация файлов из вкладки Materials с формой
             var attachmentsFiles = [];
             
+            // Обновление accept атрибута в зависимости от типа урока
+            function updateFileAccept() {
+                var lessonType = $('#Type').val();
+                var fileInput = $('#attachmentsInput');
+                var hint = $('#fileTypesHint');
+                
+                if (lessonType == '3') { // Video
+                    fileInput.attr('accept', '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv');
+                    hint.text('MP4, AVI, MOV, WMV, FLV, WEBM, MKV');
+                } else {
+                    fileInput.attr('accept', '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png');
+                    hint.text('PDF, DOC, DOCX, TXT, JPG, JPEG, PNG');
+                }
+            }
+            
+            // Обновляем при изменении типа урока
+            $('#Type').on('change', updateFileAccept);
+            updateFileAccept(); // Инициализация
+            
             $('#attachmentsInput').on('change', function(e) {
+                var lessonType = $('#Type').val();
                 var files = Array.from(e.target.files);
+                
+                // Валидация для видео
+                if (lessonType == '3') {
+                    var videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'];
+                    var invalidFiles = files.filter(function(file) {
+                        var ext = '.' + file.name.split('.').pop().toLowerCase();
+                        return !videoExtensions.includes(ext);
+                    });
+                    
+                    if (invalidFiles.length > 0) {
+                        alert('Для типа "Видео" можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV)');
+                        return;
+                    }
+                }
+                
                 attachmentsFiles = attachmentsFiles.concat(files);
                 updateAttachmentsPreview();
             });
@@ -215,7 +269,23 @@
             $('#attachmentsUploadArea').on('drop', function(e) {
                 e.preventDefault();
                 $(this).removeClass('dragover');
+                var lessonType = $('#Type').val();
                 var files = Array.from(e.originalEvent.dataTransfer.files);
+                
+                // Валидация для видео
+                if (lessonType == '3') {
+                    var videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'];
+                    var invalidFiles = files.filter(function(file) {
+                        var ext = '.' + file.name.split('.').pop().toLowerCase();
+                        return !videoExtensions.includes(ext);
+                    });
+                    
+                    if (invalidFiles.length > 0) {
+                        alert('Для типа "Видео" можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV)');
+                        return;
+                    }
+                }
+                
                 attachmentsFiles = attachmentsFiles.concat(files);
                 updateAttachmentsPreview();
                 

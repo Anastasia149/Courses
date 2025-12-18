@@ -134,20 +134,24 @@
                             @foreach (var lesson in module.Lessons.OrderBy(l => l.Order))
                             {
                                 <div class="lesson-item @(lesson.IsCompleted ? "completed" : "") @(lesson.HasHomework ? "has-assignment" : "")" 
-                                     data-lesson-type="@(lesson.HasHomework ? "assignment" : "lesson")"
+                                     data-lesson-type="@(lesson.LessonType == Courses.Models.LessonType.Video ? "video" : lesson.LessonType == Courses.Models.LessonType.Message ? "message" : lesson.LessonType == Courses.Models.LessonType.Assignment ? "assignment" : "lesson")"
                                      data-completed="@lesson.IsCompleted.ToString().ToLower()">
                                     <div class="lesson-icon">
-                                        @if (lesson.HasHomework)
+                                        @switch (lesson.LessonType)
                                         {
-                                            <i class="fas fa-tasks"></i>
-                                        }
-                                        else if (lesson.Description.Contains("video", StringComparison.OrdinalIgnoreCase) || lesson.Description.Contains("видео", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            <i class="fas fa-play"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-file-alt"></i>
+                                            case Courses.Models.LessonType.Assignment:
+                                                <i class="fas fa-tasks"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Video:
+                                                <i class="fas fa-video"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Message:
+                                                <i class="fas fa-comment"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Lecture:
+                                            default:
+                                                <i class="fas fa-file-alt"></i>
+                                                break;
                                         }
                                     </div>
                                     <div class="lesson-content">
@@ -230,20 +234,24 @@
                             @foreach (var lesson in Model.Lessons.OrderBy(l => l.Order))
                             {
                                 <div class="lesson-item @(lesson.IsCompleted ? "completed" : "") @(lesson.HasHomework ? "has-assignment" : "")" 
-                                     data-lesson-type="@(lesson.HasHomework ? "assignment" : "lesson")"
+                                     data-lesson-type="@(lesson.LessonType == Courses.Models.LessonType.Video ? "video" : lesson.LessonType == Courses.Models.LessonType.Message ? "message" : lesson.LessonType == Courses.Models.LessonType.Assignment ? "assignment" : "lesson")"
                                      data-completed="@lesson.IsCompleted.ToString().ToLower()">
                                     <div class="lesson-icon">
-                                        @if (lesson.HasHomework)
+                                        @switch (lesson.LessonType)
                                         {
-                                            <i class="fas fa-tasks"></i>
-                                        }
-                                        else if (lesson.Description.Contains("video", StringComparison.OrdinalIgnoreCase) || lesson.Description.Contains("видео", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            <i class="fas fa-play"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-file-alt"></i>
+                                            case Courses.Models.LessonType.Assignment:
+                                                <i class="fas fa-tasks"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Video:
+                                                <i class="fas fa-video"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Message:
+                                                <i class="fas fa-comment"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Lecture:
+                                            default:
+                                                <i class="fas fa-file-alt"></i>
+                                                break;
                                         }
                                     </div>
                                     <div class="lesson-content">
@@ -606,6 +614,17 @@
     .lesson-item:not(.has-assignment) .lesson-icon {
         background-color: #dbeafe;
         color: #3b82f6;
+    }
+
+    /* Стили для разных типов уроков */
+    .lesson-item[data-lesson-type="video"] .lesson-icon {
+        background-color: #fce7f3;
+        color: #ec4899;
+    }
+
+    .lesson-item[data-lesson-type="message"] .lesson-icon {
+        background-color: #e0e7ff;
+        color: #6366f1;
     }
 
     .lesson-content {

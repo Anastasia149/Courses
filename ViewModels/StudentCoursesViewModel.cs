@@ -61,5 +61,6 @@ namespace Courses.ViewModels
         public bool IsViewed { get; set; }
         public DateTime? DueDate { get; set; }
         public List<LessonFileViewModel> Files { get; set; } = new();
+        public LessonType LessonType { get; set; }
     }
 } 

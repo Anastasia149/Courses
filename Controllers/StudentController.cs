@@ -215,7 +215,7 @@ namespace Courses.Controllers
                             Description = l.Content,
                             Order = l.Order,
                             ModuleId = l.ModuleId,
-                            HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
+                            HasHomework = l.Type == Models.LessonType.Assignment || l.Type == Models.LessonType.Video,
                             HomeworkStatus = l.Homeworks
                                 .Where(h => h.StudentId == userId)
                                 .Select(h => h.Status)
@@ -223,7 +223,8 @@ namespace Courses.Controllers
                             IsCompleted = l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved),
                             IsViewed = l.Homeworks.Any(h => h.StudentId == userId),
                             DueDate = null, // DueDate не реализован в модели Homework
-                            Files = GetLessonFiles(l.Id)
+                            Files = GetLessonFiles(l.Id),
+                            LessonType = l.Type
                         })
                         .ToList(),
                     TotalLessons = m.Lessons.Count,
@@ -242,7 +243,7 @@ namespace Courses.Controllers
                     Description = l.Content,
                     Order = l.Order,
                     ModuleId = null,
-                    HasHomework = l.Homeworks.Any(h => h.StudentId == userId),
+                    HasHomework = l.Type == Models.LessonType.Assignment || l.Type == Models.LessonType.Video,
                     HomeworkStatus = l.Homeworks
                         .Where(h => h.StudentId == userId)
                         .Select(h => h.Status)
@@ -250,7 +251,8 @@ namespace Courses.Controllers
                     IsCompleted = l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved),
                     IsViewed = l.Homeworks.Any(h => h.StudentId == userId),
                     DueDate = null, // DueDate не реализован в модели Homework
-                    Files = GetLessonFiles(l.Id)
+                    Files = GetLessonFiles(l.Id),
+                    LessonType = l.Type
                 })
                 .ToList();
 
@@ -334,7 +336,7 @@ namespace Courses.Controllers
                 Description = lesson.Content,
                 Order = lesson.Order,
                 ModuleId = lesson.ModuleId,
-                HasHomework = true, // Всегда показываем возможность отправки задания
+                HasHomework = lesson.Type == Models.LessonType.Assignment || lesson.Type == Models.LessonType.Video,
                 HomeworkStatus = homework != null ? homework.Status : HomeworkStatus.Pending,
                 IsCompleted = homework?.Status == HomeworkStatus.Approved,
                 // IsViewed = true только если задание реально отправлено (не пустое)
@@ -342,7 +344,8 @@ namespace Courses.Controllers
                           homework.Status != HomeworkStatus.Cancelled && 
                           !string.IsNullOrWhiteSpace(homework.Answer),
                 DueDate = null,
-                Files = GetLessonFiles(lesson.Id)
+                Files = GetLessonFiles(lesson.Id),
+                LessonType = lesson.Type
             };
 
             ViewBag.CourseId = lesson.CourseId;
@@ -350,6 +353,7 @@ namespace Courses.Controllers
             ViewBag.PreviousLessonId = previousLesson?.Id;
             ViewBag.NextLessonId = nextLesson?.Id;
             ViewBag.ModuleTitle = lesson.Module?.Title;
+            ViewBag.LessonType = lesson.Type;
 
             return View(lessonViewModel);
         }

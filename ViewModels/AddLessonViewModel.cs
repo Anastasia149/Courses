@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Courses.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -18,6 +19,10 @@ namespace Courses.ViewModels
         [DataType(DataType.MultilineText)]
         [Display(Name = "Содержание")]
         public string Content { get; set; }
+
+        [Required(ErrorMessage = "Тип урока обязателен")]
+        [Display(Name = "Тип урока")]
+        public LessonType Type { get; set; } = LessonType.Lecture;
 
         public int CourseId { get; set; }
 

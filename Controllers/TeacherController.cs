@@ -709,11 +709,60 @@
                         .Select(l => (int?)l.Order)
                         .MaxAsync() ?? 0;
 
+                    // Сначала валидируем файлы, если они есть
+                    if (model.Attachments != null && model.Attachments.Any())
+                    {
+                        // Определяем разрешенные расширения в зависимости от типа урока
+                        string[] allowedExtensions;
+                        if (model.Type == Models.LessonType.Video)
+                        {
+                            allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                        }
+                        else
+                        {
+                            allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        }
+
+                        foreach (var file in model.Attachments)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var fileName = Path.GetFileName(file.FileName);
+                                var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
+                                
+                                if (model.Type != Models.LessonType.Video && (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif"))
+                                {
+                                    ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
+                                }
+                                else if (!allowedExtensions.Contains(fileExtension))
+                                {
+                                    var errorMsg = model.Type == Models.LessonType.Video 
+                                        ? $"Для типа 'Видео' можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV). Недопустимый формат: {fileName}"
+                                        : $"Недопустимый формат файла: {fileName}";
+                                    ModelState.AddModelError("Attachments", errorMsg);
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
+                                }
+                            }
+                        }
+                    }
+
                     var lesson = new Lesson
                     {
                         Title = model.Title,
                         Order = maxOrder + 1,
                         Content = model.Content,
+                        Type = model.Type,
                         CourseId = model.CourseId,
                         ModuleId = model.ModuleId,
                         CreatedAt = DateTime.UtcNow
@@ -728,7 +777,17 @@
                         var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
                         Directory.CreateDirectory(uploadPath);
 
-                        var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        // Определяем разрешенные расширения в зависимости от типа урока
+                        string[] allowedExtensions;
+                        if (lesson.Type == Models.LessonType.Video)
+                        {
+                            allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                        }
+                        else
+                        {
+                            allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        }
+
                         foreach (var file in model.Attachments)
                         {
                             if (file.Length > 0)
@@ -737,17 +796,6 @@
                                 var fileName = Path.GetFileName(file.FileName);
                                 var filePath = Path.Combine(uploadPath, fileName);
                                 var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
-                                
-                                if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
-                                {
-                                    ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
-                                    return View(model);
-                                }
-                                else if (!allowedExtensions.Contains(fileExtension))
-                                {
-                                    ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
-                                    return View(model);
-                                }
                                 try
                                 {
                                     using var stream = new FileStream(filePath, FileMode.Create);
@@ -758,9 +806,35 @@
                                 {
                                     _logger.LogError(ex, $"Ошибка при сохранении файла {fileName}");
                                     ModelState.AddModelError("Attachments", $"Ошибка при сохранении файла {fileName}: {ex.Message}");
+                                    
+                                    // Если произошла ошибка при сохранении файла, удаляем урок
+                                    _context.Lessons.Remove(lesson);
+                                    await _context.SaveChangesAsync();
+                                    
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
                                 }
                             }
                         }
+                    }
+
+                    // Проверяем, есть ли ошибки после сохранения файлов
+                    if (!ModelState.IsValid)
+                    {
+                        // Если есть ошибки, удаляем урок
+                        _context.Lessons.Remove(lesson);
+                        await _context.SaveChangesAsync();
+                        
+                        model.Modules = await _context.Modules
+                            .Where(m => m.CourseId == model.CourseId)
+                            .OrderBy(m => m.OrderNumber)
+                            .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                            .ToListAsync();
+                        return View(model);
                     }
 
                     _logger.LogInformation($"Урок успешно создан: {lesson.Title} (ID: {lesson.Id}) для курса {course.Title}");
@@ -1143,6 +1217,7 @@
                     Title = lesson.Title,
                     Order = lesson.Order,
                     Content = lesson.Content,
+                    Type = lesson.Type,
                     CourseId = lesson.CourseId,
                     ExistingFiles = GetLessonFiles(lesson.Id),
                     ModuleId = lesson.ModuleId
@@ -1183,6 +1258,7 @@
                 lesson.Title = model.Title;
                 // Order не изменяется при редактировании
                 lesson.Content = model.Content;
+                lesson.Type = model.Type;
                 lesson.ModuleId = model.ModuleId;
 
                 // Загрузка файлов
@@ -1190,10 +1266,20 @@
                 {
                     var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
 
+                    // Определяем разрешенные расширения в зависимости от типа урока
+                    string[] allowedExtensions;
+                    if (lesson.Type == Models.LessonType.Video)
+                    {
+                        allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                    }
+                    else
+                    {
+                        allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                    }
+
                     if (!Directory.Exists(uploadPath))
                         Directory.CreateDirectory(uploadPath);
 
-                    var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
                     foreach (var file in model.Attachments)
                     {
                         if (file.Length > 0)
@@ -1203,14 +1289,29 @@
                             var filePath = Path.Combine(uploadPath, fileName);
                             var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
                             
-                            if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
+                            if (lesson.Type != Models.LessonType.Video && (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif"))
                             {
                                 ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                model.ExistingFiles = GetLessonFiles(model.Id);
+                                model.Modules = await _context.Modules
+                                    .Where(m => m.CourseId == model.CourseId)
+                                    .OrderBy(m => m.OrderNumber)
+                                    .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                    .ToListAsync();
                                 return View(model);
                             }
                             else if (!allowedExtensions.Contains(fileExtension))
                             {
-                                ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
+                                var errorMsg = lesson.Type == Models.LessonType.Video 
+                                    ? $"Для типа 'Видео' можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV). Недопустимый формат: {fileName}"
+                                    : $"Недопустимый формат файла: {fileName}";
+                                ModelState.AddModelError("Attachments", errorMsg);
+                                model.ExistingFiles = GetLessonFiles(model.Id);
+                                model.Modules = await _context.Modules
+                                    .Where(m => m.CourseId == model.CourseId)
+                                    .OrderBy(m => m.OrderNumber)
+                                    .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                    .ToListAsync();
                                 return View(model);
                             }
                             try

@@ -98,7 +98,30 @@
                                             <div class="lesson-info" style="cursor: pointer;" onclick="location.href='@Url.Action("ReviewLessonAssignments", "Teacher", new { lessonId = lesson.Id })'">
                                                 <div class="lesson-number">Урок @lesson.Order</div>
                                                 <div class="lesson-type">
-                                                    <i class="fas fa-file-alt"></i> Текст
+                                                    @{
+                                                        // Используем значение по умолчанию, если Type не установлен (для старых записей)
+                                                        var lessonType = lesson.Type;
+                                                    }
+                                                    @switch (lessonType)
+                                                    {
+                                                        case Courses.Models.LessonType.Assignment:
+                                                            <i class="fas fa-tasks"></i>
+                                                            <span>Задание</span>
+                                                            break;
+                                                        case Courses.Models.LessonType.Video:
+                                                            <i class="fas fa-video"></i>
+                                                            <span>Видео</span>
+                                                            break;
+                                                        case Courses.Models.LessonType.Message:
+                                                            <i class="fas fa-comment"></i>
+                                                            <span>Сообщение</span>
+                                                            break;
+                                                        case Courses.Models.LessonType.Lecture:
+                                                        default:
+                                                            <i class="fas fa-file-alt"></i>
+                                                            <span>Лекция</span>
+                                                            break;
+                                                    }
                                                 </div>
                                                 <div class="lesson-title">@lesson.Title</div>
                                             </div>
