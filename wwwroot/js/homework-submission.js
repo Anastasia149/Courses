@@ -97,24 +97,164 @@ $(document).ready(function() {
             $('#homeworkForm').show();
             $('#cancelButton').hide();
         }
+        
+        // Убеждаемся, что форма видна после загрузки данных
+        console.log('Форма видима после загрузки:', $('#homeworkForm').is(':visible'));
+        console.log('Кнопка видима после загрузки:', $('#submitButton').is(':visible'));
     });
 
-    // Обработка отправки формы
-    $('#homeworkForm').on('submit', function(e) {
+    // Обработка отправки формы - привязываем сразу, независимо от состояния формы
+    console.log('Привязка обработчика submit для формы homeworkForm...');
+    var homeworkForm = $('#homeworkForm');
+    console.log('Форма найдена:', homeworkForm.length > 0);
+    if (homeworkForm.length > 0) {
+        console.log('Форма видима:', homeworkForm.is(':visible'));
+        console.log('Форма display:', homeworkForm.css('display'));
+        console.log('Форма action:', homeworkForm.attr('action'));
+    }
+    
+    // Проверяем кнопку submit
+    var submitButton = $('#submitButton');
+    console.log('Кнопка найдена:', submitButton.length > 0);
+    if (submitButton.length > 0) {
+        console.log('Кнопка видима:', submitButton.is(':visible'));
+        console.log('Кнопка type:', submitButton.attr('type'));
+    }
+    
+    // Также добавляем обработчик на кнопку для отладки - используем capture фазу
+    document.addEventListener('click', function(e) {
+        if (e.target && (e.target.id === 'submitButton' || e.target.closest('#submitButton'))) {
+            console.log('Кнопка submit нажата (через capture)!');
+            console.log('Target:', e.target);
+            console.log('Форма в момент клика:', $('#homeworkForm').is(':visible'));
+        }
+    }, true);
+    
+    $(document).on('click', '#submitButton', function(e) {
+        console.log('Кнопка submit нажата (через jQuery)!');
+        console.log('Event:', e);
+        console.log('Форма в момент клика:', $('#homeworkForm').is(':visible'));
+        console.log('Кнопка в момент клика:', $(this).is(':visible'));
+        
+        // Проверяем файлы перед отправкой
+        var fileInput = document.getElementById('files');
+        if (fileInput) {
+            console.log('fileInput.files в момент клика:', fileInput.files);
+            console.log('fileInput.files.length в момент клика:', fileInput.files ? fileInput.files.length : 0);
+        }
+        
+        // Если форма скрыта, показываем её
+        if (!$('#homeworkForm').is(':visible')) {
+            console.log('Форма была скрыта, показываем её');
+            $('#homeworkForm').show();
+        }
+        
+        // Принудительно обновляем файлы перед отправкой
+        if (typeof window.updateFileInput === 'function') {
+            console.log('Принудительно обновляем файлы перед отправкой...');
+            try {
+                window.updateFileInput();
+                console.log('Файлы обновлены, теперь fileInput.files.length:', fileInput ? fileInput.files.length : 0);
+            } catch (err) {
+                console.error('Ошибка при обновлении файлов:', err);
+            }
+        }
+        
+        // Не предотвращаем default, чтобы форма могла отправиться естественным образом
+        // Но также добавляем небольшую задержку для синхронизации файлов
+        setTimeout(function() {
+            console.log('Триггерим submit после обновления файлов...');
+            $('#homeworkForm').trigger('submit');
+        }, 50);
+    });
+    
+    // Используем делегирование событий для надежности
+    $(document).on('submit', '#homeworkForm', function(e) {
+        console.log('Обработчик submit сработал!');
         e.preventDefault();
+        e.stopPropagation();
+        
+        // Помечаем, что форма отправляется
+        $(this).data('submitted', true);
+        
         var form = $(this);
-        var formData = new FormData(form[0]);
+        
+        // Валидация: требуется текстовый ответ
+        var answer = form.find('#answer').val() || '';
+        var fileInput = document.getElementById('files');
+        
+        if (!answer || !answer.trim()) {
+            alert('Пожалуйста, введите текстовый ответ.');
+            return false;
+        }
+        
+        var formData = new FormData();
+        
+        // Добавляем lessonId
+        var lessonId = form.find('input[name="lessonId"]').val();
+        formData.append('lessonId', lessonId);
+        console.log('LessonId:', lessonId);
+        
+        // Добавляем answer (текстовый ответ) - даже если пустой
+        formData.append('answer', answer || '');
+        console.log('Answer:', answer || '(пусто)');
+        
+        // Добавляем файлы из input (если есть)
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            for (var i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+        }
+        
+        // Добавляем anti-forgery token, если он есть
+        var token = form.find('input[name="__RequestVerificationToken"]').val();
+        if (token) {
+            formData.append('__RequestVerificationToken', token);
+        }
+        
+        // Логируем содержимое FormData для отладки
+        console.log('Отправка AJAX запроса...');
+        console.log('FormData содержимое:');
+        for (var pair of formData.entries()) {
+            if (pair[1] instanceof File) {
+                console.log(pair[0] + ': [FILE] ' + pair[1].name + ' (' + pair[1].size + ' bytes)');
+            } else {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+        }
+        
         $.ajax({
             url: form.attr('action'),
             type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
-            success: function() {
+            success: function(response) {
+                console.log('Успешная отправка:', response);
                 window.location.reload();
             },
-            error: function() {
-                alert('Произошла ошибка при отправке домашнего задания.');
+            error: function(xhr, status, error) {
+                console.error('Ошибка при отправке:', error);
+                console.error('Status:', status);
+                console.error('Response:', xhr.responseText);
+                console.error('Status Code:', xhr.status);
+                
+                // Показываем более детальную информацию об ошибке
+                var errorMessage = 'Произошла ошибка при отправке домашнего задания.';
+                if (xhr.responseText) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.error || response.message) {
+                            errorMessage = response.error || response.message;
+                        }
+                    } catch (e) {
+                        // Если не JSON, показываем текст ответа
+                        if (xhr.responseText.length < 500) {
+                            errorMessage += '\n' + xhr.responseText;
+                        }
+                    }
+                }
+                alert(errorMessage);
             }
         });
     });

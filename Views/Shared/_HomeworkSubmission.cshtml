@@ -405,6 +405,8 @@
 
         // Обработка выбора файлов
         fileInput.addEventListener('change', function(e) {
+            // При выборе файлов через диалог, очищаем старые и добавляем новые
+            selectedFiles = [];
             handleFiles(e.target.files);
         });
 
@@ -484,7 +486,11 @@
                 dataTransfer.items.add(file);
             });
             fileInput.files = dataTransfer.files;
+            console.log('updateFileInput вызван, файлов в input:', fileInput.files.length);
         }
+        
+        // Делаем функцию доступной глобально для вызова из homework-submission.js
+        window.updateFileInput = updateFileInput;
 
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
@@ -492,19 +498,6 @@
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // Обработка отправки формы
-        const homeworkForm = document.getElementById('homeworkForm');
-        if (homeworkForm) {
-            homeworkForm.addEventListener('submit', function(e) {
-                const answerText = document.getElementById('answer');
-                if (selectedFiles.length === 0 && (!answerText || !answerText.value.trim())) {
-                    e.preventDefault();
-                    alert('Пожалуйста, введите ответ или прикрепите файл.');
-                    return false;
-                }
-            });
         }
     }
 

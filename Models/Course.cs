@@ -15,7 +15,8 @@ namespace Courses.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public string? Category { get; set; }
+        public int? CategoryId { get; set; }
+        public CourseCategory? Category { get; set; }
         public string? DifficultyLevel { get; set; }
         public string? CoverImagePath { get; set; }
 

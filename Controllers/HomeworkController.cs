@@ -62,6 +62,22 @@ namespace Courses.Controllers
                 }
             }
 
+            // Гарантируем, что answer не null (используем пустую строку вместо null)
+            answer = answer ?? string.Empty;
+
+            // Проверяем, что есть текстовый ответ
+            if (string.IsNullOrWhiteSpace(answer))
+            {
+                TempData["Error"] = "Пожалуйста, введите текстовый ответ.";
+                return RedirectToAction("Lesson", "Student", new { id = lessonId });
+            }
+
+            // Если файлы не пришли в параметре, получаем их из Request.Form.Files
+            if (files == null || !files.Any())
+            {
+                files = Request.Form.Files?.ToList() ?? new List<IFormFile>();
+            }
+
             if (homework == null)
             {
                 // Создаем новое домашнее задание
@@ -77,17 +93,15 @@ namespace Courses.Controllers
             }
             else
             {
-                // Обновляем существующее домашнее задание
-                // Если задание было создано автоматически для комментариев (пустой ответ), обновляем его
-                homework.Answer = answer;
-                homework.Status = HomeworkStatus.Pending;
-                homework.SubmittedAt = DateTime.UtcNow;
-                homework.Feedback = null;
+                // Сохраняем ID для дальнейшего использования
+                var homeworkId = homework.Id;
                 
                 // Удаляем старые файлы, если они есть (при обновлении задания)
+                // Делаем это до обновления свойств homework
                 if (homework.Files != null && homework.Files.Any())
                 {
-                    foreach (var file in homework.Files.ToList())
+                    var filesToDelete = homework.Files.ToList();
+                    foreach (var file in filesToDelete)
                     {
                         var filePath = Path.Combine(_environment.WebRootPath, file.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
                         if (System.IO.File.Exists(filePath))
@@ -97,6 +111,12 @@ namespace Courses.Controllers
                         _context.Remove(file);
                     }
                 }
+                
+                // Обновляем существующее домашнее задание
+                homework.Answer = answer;
+                homework.Status = HomeworkStatus.Pending;
+                homework.SubmittedAt = DateTime.UtcNow;
+                homework.Feedback = null;
             }
 
             // Обработка файлов
@@ -132,7 +152,119 @@ namespace Courses.Controllers
                 }
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                // Если произошла ошибка конкурентности, проверяем, не был ли homework уже сохранен
+                var savedHomework = await _context.Homeworks
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId);
+                
+                if (savedHomework != null && savedHomework.Answer == answer)
+                {
+                    // Домашнее задание уже успешно сохранено, просто используем его
+                    homework = savedHomework;
+                }
+                else
+                {
+                    // Если не сохранено, пытаемся сохранить заново
+                    // Отсоединяем все отслеживаемые сущности
+                    foreach (var entry in _context.ChangeTracker.Entries().ToList())
+                    {
+                        entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    }
+                    
+                    // Загружаем homework заново
+                    homework = await _context.Homeworks
+                        .Include(h => h.Files)
+                        .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId);
+                    
+                    if (homework == null)
+                    {
+                        TempData["Error"] = "Домашнее задание было удалено. Пожалуйста, попробуйте отправить заново.";
+                        return RedirectToAction("Lesson", "Student", new { id = lessonId });
+                    }
+                    
+                    // Удаляем старые файлы, если они есть
+                    if (homework.Files != null && homework.Files.Any())
+                    {
+                        var filesToDelete = homework.Files.ToList();
+                        foreach (var file in filesToDelete)
+                        {
+                            var filePath = Path.Combine(_environment.WebRootPath, file.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                            if (System.IO.File.Exists(filePath))
+                            {
+                                System.IO.File.Delete(filePath);
+                            }
+                            _context.Remove(file);
+                        }
+                    }
+                    
+                    // Обновляем данные заново
+                    homework.Answer = answer;
+                    homework.Status = HomeworkStatus.Pending;
+                    homework.SubmittedAt = DateTime.UtcNow;
+                    homework.Feedback = null;
+                    
+                    // Повторно обрабатываем файлы, если они есть
+                    if (files != null && files.Any())
+                    {
+                        var homeworkUploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "homeworks", homework.Id.ToString());
+                        if (!Directory.Exists(homeworkUploadsFolder))
+                        {
+                            Directory.CreateDirectory(homeworkUploadsFolder);
+                        }
+
+                        foreach (var file in files)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+                                var filePath = Path.Combine(homeworkUploadsFolder, uniqueFileName);
+                                using (var stream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await file.CopyToAsync(stream);
+                                }
+                                var relativePath = $"/uploads/homeworks/{homework.Id}/{uniqueFileName}";
+                                var homeworkFile = new HomeworkFile
+                                {
+                                    FileName = file.FileName,
+                                    FilePath = relativePath,
+                                    ContentType = file.ContentType,
+                                    FileSize = file.Length,
+                                    HomeworkId = homework.Id
+                                };
+                                homework.Files.Add(homeworkFile);
+                            }
+                        }
+                    }
+                    
+                    // Пробуем сохранить снова (тихо игнорируем ошибку, если данные уже сохранены)
+                    try
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+                    {
+                        // Проверяем еще раз, не был ли homework сохранен
+                        var finalCheck = await _context.Homeworks
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId);
+                        
+                        if (finalCheck == null || finalCheck.Answer != answer)
+                        {
+                            // Действительно не сохранено - показываем ошибку
+                            TempData["Error"] = "Произошла ошибка при сохранении. Пожалуйста, попробуйте еще раз.";
+                            return RedirectToAction("Lesson", "Student", new { id = lessonId });
+                        }
+                        // Иначе - данные сохранены, продолжаем
+                        homework = finalCheck;
+                    }
+                }
+            }
 
             // Отправляем уведомление преподавателю
             await _notificationService.CreateNotificationAsync(

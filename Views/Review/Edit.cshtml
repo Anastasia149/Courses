@@ -1,6 +1,6 @@
 @model Courses.ViewModels.CreateReviewViewModel
 @{
-    ViewData["Title"] = "Оставить отзыв";
+    ViewData["Title"] = "Редактировать отзыв";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
 }
 
@@ -9,7 +9,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h4>Оставить отзыв на курс: @Model.CourseTitle</h4>
+                    <h4>Редактировать отзыв на курс: @Model.CourseTitle</h4>
                 </div>
                 <div class="card-body">
                     @if (TempData["ErrorMessage"] != null)
@@ -19,13 +19,10 @@
                         </div>
                     }
 
-                    <form asp-action="@(ViewBag.ReviewId != null ? "Edit" : "Create")" asp-controller="Review" method="post">
+                    <form asp-action="Edit" asp-controller="Review" method="post">
+                        <input type="hidden" name="id" value="@ViewBag.ReviewId" />
                         <input type="hidden" asp-for="CourseId" />
                         <input type="hidden" asp-for="CourseTitle" />
-                        @if (ViewBag.ReviewId != null)
-                        {
-                            <input type="hidden" name="id" value="@ViewBag.ReviewId" />
-                        }
 
                         <div class="mb-3">
                             <label asp-for="Rating" class="form-label">Оценка *</label>
@@ -53,9 +50,7 @@
 
                         <div class="d-flex justify-content-between">
                             <a asp-action="Index" asp-controller="Review" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">Отмена</a>
-                            <button type="submit" class="btn btn-primary">
-                                @(ViewBag.ReviewId != null ? "Обновить отзыв" : "Оставить отзыв")
-                            </button>
+                            <button type="submit" class="btn btn-primary">Обновить отзыв</button>
                         </div>
                     </form>
                 </div>

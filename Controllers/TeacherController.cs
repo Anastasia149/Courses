@@ -927,13 +927,6 @@
                 {
                     var teacherId = _userManager.GetUserId(User);
 
-                    string categoryName = null;
-                    if (model.CategoryId.HasValue)
-                    {
-                        var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
-                        categoryName = category?.Name;
-                    }
-
                     // Сохранение обложки курса
                     string coverImagePath = null;
                     if (model.CoverImage != null && model.CoverImage.Length > 0)
@@ -988,7 +981,7 @@
                     {
                         Title = model.Title,
                         Description = model.ShortDescription,
-                        Category = categoryName,
+                        CategoryId = model.CategoryId,
                         DifficultyLevel = model.DifficultyLevel,
                         CoverImagePath = coverImagePath,
                         TeacherId = teacherId,
@@ -1037,24 +1030,16 @@
                     {
                         Value = c.Id.ToString(),
                         Text = c.Name,
-                        Selected = c.Name == course.Category
+                        Selected = c.Id == course.CategoryId
                     })
                     .ToListAsync();
-
-                int? categoryId = null;
-                if (!string.IsNullOrEmpty(course.Category))
-                {
-                    var selectedCategory = await _context.CourseCategories
-                        .FirstOrDefaultAsync(c => c.Name == course.Category);
-                    categoryId = selectedCategory?.Id;
-                }
 
                 var model = new EditCourseViewModel
                 {
                     Id = course.Id,
                     Title = course.Title,
                     ShortDescription = course.Description,
-                    CategoryId = categoryId,
+                    CategoryId = course.CategoryId,
                     Categories = categories,
                     DifficultyLevel = course.DifficultyLevel,
                     ExistingCoverImagePath = course.CoverImagePath,
@@ -1087,13 +1072,6 @@
                 if (course == null || course.TeacherId != _userManager.GetUserId(User))
                 {
                     return NotFound();
-                }
-
-                string categoryName = null;
-                if (model.CategoryId.HasValue)
-                {
-                    var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
-                    categoryName = category?.Name;
                 }
 
                 // Сохранение новой обложки курса
@@ -1158,7 +1136,7 @@
 
                 course.Title = model.Title;
                 course.Description = model.ShortDescription;
-                course.Category = categoryName;
+                course.CategoryId = model.CategoryId;
                 course.DifficultyLevel = model.DifficultyLevel;
                 course.CoverImagePath = coverImagePath;
 

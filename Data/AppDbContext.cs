@@ -141,6 +141,13 @@ namespace Courses.Data
                 .WithMany()
                 .HasForeignKey(r => r.UserId);
 
+            // Настройка связи между Course и CourseCategory
+            builder.Entity<Course>()
+                .HasOne(c => c.Category)
+                .WithMany()
+                .HasForeignKey(c => c.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Настройка связи между Homework и HomeworkComment
             // Удаление комментариев обрабатывается в SaveChangesAsync
             builder.Entity<HomeworkComment>()

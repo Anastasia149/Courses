@@ -11,8 +11,7 @@ namespace Courses.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [Required]
-        public string Answer { get; set; }
+        public string Answer { get; set; } = string.Empty;
 
         public string? Feedback { get; set; }
         public HomeworkStatus Status { get; set; } = HomeworkStatus.Pending;
