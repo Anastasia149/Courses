@@ -1,27 +1,26 @@
 ﻿﻿@using Microsoft.AspNetCore.Identity;
 @inject SignInManager<User> signInManager;
+@inject UserManager<User> userManager;
 
-<ul class="navbar-nav ms-auto align-items-center">
-    @if (signInManager.IsSignedIn(User))
+@{
+    var currentUser = signInManager.IsSignedIn(User) ? await userManager.GetUserAsync(User) : null;
+}
+
+<div class="d-flex align-items-center gap-2">
+    @if (signInManager.IsSignedIn(User) && currentUser != null)
     {
-        <li class="nav-item">
-            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-link nav-link text-dark p-0">Выход</button>
-            </form>
-        </li>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-dark btn-sm">Выход</button>
+        </form>
     }
     else
     {
-        <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">
-                Вход
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">
-                Регистрация
-            </a>
-        </li>
+        <a class="btn btn-outline-dark btn-sm" asp-controller="Account" asp-action="Login">
+            Войти
+        </a>
+        <a class="btn btn-dark btn-sm" asp-controller="Account" asp-action="Register">
+            Регистрация
+        </a>
     }
-</ul>
+</div>

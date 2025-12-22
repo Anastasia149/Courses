@@ -57,7 +57,10 @@ namespace Courses.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Category")
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CoverImagePath")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -83,6 +86,8 @@ namespace Courses.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("TeacherId");
 
@@ -152,6 +157,38 @@ namespace Courses.Migrations
                     b.ToTable("Homeworks");
                 });
 
+            modelBuilder.Entity("Courses.Models.HomeworkComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HomeworkId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HomeworkId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("HomeworkComments");
+                });
+
             modelBuilder.Entity("Courses.Models.HomeworkFile", b =>
                 {
                     b.Property<int>("Id")
@@ -216,6 +253,9 @@ namespace Courses.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
@@ -223,43 +263,6 @@ namespace Courses.Migrations
                     b.HasIndex("ModuleId");
 
                     b.ToTable("Lessons");
-                });
-
-            modelBuilder.Entity("Courses.Models.LessonComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("LessonId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ParentCommentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LessonId");
-
-                    b.HasIndex("ParentCommentId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("LessonComments");
                 });
 
             modelBuilder.Entity("Courses.Models.Module", b =>
@@ -628,6 +631,11 @@ namespace Courses.Migrations
 
             modelBuilder.Entity("Courses.Models.Course", b =>
                 {
+                    b.HasOne("Courses.Models.CourseCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Courses.Models.User", "Teacher")
                         .WithMany()
                         .HasForeignKey("TeacherId")
@@ -637,6 +645,8 @@ namespace Courses.Migrations
                     b.HasOne("Courses.Models.User", null)
                         .WithMany("TaughtCourses")
                         .HasForeignKey("UserId");
+
+                    b.Navigation("Category");
 
                     b.Navigation("Teacher");
                 });
@@ -662,6 +672,25 @@ namespace Courses.Migrations
                     b.Navigation("Lesson");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Courses.Models.HomeworkComment", b =>
+                {
+                    b.HasOne("Courses.Models.Homework", "Homework")
+                        .WithMany("Comments")
+                        .HasForeignKey("HomeworkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Courses.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Homework");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Courses.Models.HomeworkFile", b =>
@@ -691,31 +720,6 @@ namespace Courses.Migrations
                     b.Navigation("Course");
 
                     b.Navigation("Module");
-                });
-
-            modelBuilder.Entity("Courses.Models.LessonComment", b =>
-                {
-                    b.HasOne("Courses.Models.Lesson", "Lesson")
-                        .WithMany()
-                        .HasForeignKey("LessonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Courses.Models.LessonComment", "ParentComment")
-                        .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId");
-
-                    b.HasOne("Courses.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Lesson");
-
-                    b.Navigation("ParentComment");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Courses.Models.Module", b =>
@@ -860,17 +864,14 @@ namespace Courses.Migrations
 
             modelBuilder.Entity("Courses.Models.Homework", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Courses.Models.Lesson", b =>
                 {
                     b.Navigation("Homeworks");
-                });
-
-            modelBuilder.Entity("Courses.Models.LessonComment", b =>
-                {
-                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("Courses.Models.Module", b =>

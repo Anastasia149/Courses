@@ -1,64 +1,282 @@
 @using Courses.ViewModels
 @using Courses.Models
-@using System.Linq
 @model StudentCoursesViewModel
 @{
-    ViewData["Title"] = "Мои курсы";
+    ViewData["Title"] = "Моё обучение";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var user = ViewBag.User as User;
 }
 
-<div class="container mt-4">
-    <h1 class="mb-4">Мои курсы</h1>
+<div class="student-dashboard-content">
+    <!-- Welcome Section -->
+    <div class="welcome-section mb-5">
+        <h1 class="welcome-title">Добро пожаловать, @(user?.FullName ?? "Студент")!</h1>
+        <p class="welcome-subtitle">Продолжайте своё обучение</p>
+    </div>
 
-    @if (Model.EnrolledCourses.Any())
-    {
-        <div class="row">
-            @foreach (var course in Model.EnrolledCourses)
-            {
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">@course.Title</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Преподаватель: @course.TeacherName</h6>
-                            <p class="card-text">@course.Description</p>
-                            <div class="course-stats mb-3">
-                                <span class="badge bg-primary me-2">
-                                    <i class="fas fa-book"></i> @course.LessonsCount уроков
-                                </span>
-                                @if (course.PendingHomeworksCount > 0)
-                                {
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-tasks"></i> @course.PendingHomeworksCount ДЗ на проверке
-                                    </span>
-                                }
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex gap-2">
-                                    <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn btn-primary btn-sm">
-                                        Перейти к курсу
-                                    </a>
-                                    <form asp-action="LeaveCourse" method="post" onsubmit="return confirm('Покинуть этот курс?');" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="courseId" value="@course.CourseId" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            Покинуть курс
-                                        </button>
-                                    </form>
+    <!-- Current Courses Section -->
+    <div class="courses-section">
+        <h2 class="section-title mb-4">Текущие курсы</h2>
+
+        @if (Model.EnrolledCourses.Any())
+        {
+            <div class="courses-grid">
+                @foreach (var course in Model.EnrolledCourses)
+                {
+                    <div class="course-card">
+                        <div class="course-image-wrapper">
+                            @if (!string.IsNullOrEmpty(course.CoverImagePath))
+                            {
+                                <img src="@course.CoverImagePath" alt="@course.Title" class="course-image" onerror="this.src='/images/homePage.jpg'">
+                            }
+                            else
+                            {
+                                <img src="/images/homePage.jpg" alt="@course.Title" class="course-image">
+                            }
+                        </div>
+                        <div class="course-content">
+                            <h3 class="course-title">@course.Title</h3>
+                            <p class="course-instructor">от @course.TeacherName</p>
+                            
+                            <!-- Progress Bar -->
+                            <div class="course-progress">
+                                <div class="progress-info">
+                                    <span class="progress-label">Прогресс</span>
+                                    <span class="progress-percentage">@course.ProgressPercentage%</span>
                                 </div>
-                                <small class="text-muted">
-                                    Записан: @course.EnrolledAt.ToString("dd.MM.yyyy")
-                                </small>
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-fill" style="width: @course.ProgressPercentage%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="course-actions d-flex gap-2">
+                                <a asp-action="CourseDetails" asp-route-id="@course.CourseId" class="btn-continue flex-grow-1">
+                                    Продолжить
+                                </a>
+                                <a asp-controller="Review" asp-action="Index" asp-route-courseId="@course.CourseId" class="btn-reviews">
+                                    <i class="fas fa-star me-1"></i>Отзывы
+                                </a>
                             </div>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-book-open fa-3x mb-3 text-muted"></i>
+                <h3>Пока нет курсов</h3>
+                <p class="text-muted">Вы пока не записаны ни на один курс. Дождитесь приглашения от преподавателя.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .student-dashboard-content {
+        max-width: 1400px;
+        margin: 0 auto;
     }
-    else
-    {
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            Вы пока не записаны ни на один курс. Дождитесь приглашения от преподавателя.
-        </div>
+
+    .welcome-section {
+        margin-bottom: 3rem;
     }
-</div> 
+
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .welcome-subtitle {
+        font-size: 1.125rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .courses-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 2rem;
+    }
+
+    .course-card {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .course-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .course-image-wrapper {
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        background: #f3f4f6;
+    }
+
+    .course-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .course-content {
+        padding: 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .course-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .course-instructor {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+    }
+
+    .course-progress {
+        margin-bottom: 1.5rem;
+        flex: 1;
+    }
+
+    .progress-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .progress-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .progress-percentage {
+        font-size: 0.875rem;
+        color: #1a1a1a;
+        font-weight: 600;
+    }
+
+    .progress-bar-wrapper {
+        width: 100%;
+        height: 8px;
+        background-color: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .course-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-continue {
+        display: inline-block;
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        background-color: #1a1a1a;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-continue:hover {
+        background-color: #2d2d2d;
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .btn-reviews {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: #1976d2;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-reviews:hover {
+        background-color: #1565c0;
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    @@media (max-width: 768px) {
+        .welcome-title {
+            font-size: 2rem;
+        }
+
+        .courses-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .main-content {
+            padding: 1.5rem;
+        }
+    }
+</style>

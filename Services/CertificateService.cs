@@ -91,18 +91,18 @@ namespace Courses.Services
             {
                 _logger.LogInformation($"Проверка права на сертификат для студента {studentId} по курсу {courseId}");
 
-                // Получаем все уроки курса
+                // Получаем только уроки, где можно прикреплять файлы (Assignment и Video)
                 var courseLessons = await _context.Lessons
-                    .Where(l => l.CourseId == courseId)
+                    .Where(l => l.CourseId == courseId && (l.Type == LessonType.Assignment || l.Type == LessonType.Video))
                     .ToListAsync();
 
                 if (!courseLessons.Any())
                 {
-                    _logger.LogWarning($"В курсе {courseId} нет уроков");
+                    _logger.LogWarning($"В курсе {courseId} нет уроков с заданиями (Assignment или Video)");
                     return false;
                 }
 
-                _logger.LogInformation($"Найдено {courseLessons.Count} уроков в курсе {courseId}");
+                _logger.LogInformation($"Найдено {courseLessons.Count} уроков с заданиями в курсе {courseId}");
 
                 // Проверяем, что все домашние задания выполнены и оценены положительно
                 foreach (var lesson in courseLessons)

@@ -45,6 +45,8 @@
                 var courses = await _context.Courses
                     .Include(c => c.Lessons)
                     .ThenInclude(l => l.Homeworks)
+                    .Include(c => c.UserCourses)
+                    .Include(c => c.Reviews)
                     .Where(c => c.TeacherId == teacherId)
                     .ToListAsync();
 
@@ -85,12 +87,18 @@
                 return View(model);
             }
 
+            // Автоматически вычисляем порядковый номер модуля
+            var maxOrderNumber = await _context.Modules
+                .Where(m => m.CourseId == model.CourseId)
+                .Select(m => (int?)m.OrderNumber)
+                .MaxAsync() ?? 0;
+
             var module = new Module
             {
                 CourseId = model.CourseId,
                 Title = model.Title,
-                Description = model.Description,
-                OrderNumber = model.OrderNumber
+                Description = null,
+                OrderNumber = maxOrderNumber + 1
             };
 
             _context.Modules.Add(module);
@@ -191,26 +199,100 @@
                     .Where(uc => uc.CourseId == id)
                     .ToListAsync();
 
-                var model = new TeacherCoursesViewModel
+                // Получаем отзывы для курса
+                var reviews = await _context.Reviews
+                    .Include(r => r.User)
+                    .Where(r => r.CourseId == id)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+
+                var averageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+
+                var model = new CourseDetailsViewModel
                 {
-                    Courses = courses,
-                    CurrentStatus = status,
-                    SelectedCourse = new CourseDetailsViewModel
-                    {
-                        Course = selectedCourse,
-                        PendingHomeworks = homeworks,
-                        EnrolledStudentsCount = enrolledUsers.Count,
-                        EnrolledStudents = enrolledUsers.Select(uc => uc.User).ToList(),
-                        CurrentStatus = status // Сохраняем текущий статус фильтрации
-                    }
+                    Course = selectedCourse,
+                    PendingHomeworks = homeworks,
+                    EnrolledStudentsCount = enrolledUsers.Count,
+                    EnrolledStudents = enrolledUsers.Select(uc => uc.User).ToList(),
+                    CurrentStatus = status
                 };
 
-                return View("~/Views/Home/Course.cshtml", model);
+                // Передаем информацию о датах регистрации
+                ViewBag.Enrollments = enrolledUsers.ToDictionary(uc => uc.UserId, uc => uc.EnrollmentDate);
+                // Передаем отзывы для аналитики
+                ViewBag.Reviews = reviews;
+                ViewBag.AverageRating = averageRating;
+                ViewBag.TotalReviews = reviews.Count;
+
+                return View("~/Views/Teacher/CourseDetails.cshtml", model);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка при загрузке курса {id}");
                 return StatusCode(500, "Произошла ошибка при загрузке курса");
+            }
+        }
+
+        // Partial view endpoint for AJAX loading of course details (tabs only)
+        [HttpGet]
+        public async Task<IActionResult> CourseDetailsPartial(int id, HomeworkStatus? status = HomeworkStatus.Pending)
+        {
+            try
+            {
+                var teacherId = _userManager.GetUserId(User);
+
+                var selectedCourse = await _context.Courses
+                    .Include(c => c.Lessons)
+                        .ThenInclude(l => l.Module)
+                    .Include(c => c.Lessons)
+                        .ThenInclude(l => l.Homeworks)
+                            .ThenInclude(h => h.Student)
+                    .FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == teacherId);
+
+                if (selectedCourse == null)
+                {
+                    return NotFound();
+                }
+
+                var homeworksQuery = selectedCourse.Lessons
+                    .SelectMany(l => l.Homeworks);
+
+                List<Homework> homeworks;
+                if (status == null || status == HomeworkStatus.Pending)
+                {
+                    homeworks = homeworksQuery
+                        .Where(h => h.Status == HomeworkStatus.Pending || h.Status == HomeworkStatus.Approved)
+                        .ToList();
+                }
+                else
+                {
+                    homeworks = homeworksQuery
+                        .Where(h => h.Status == status)
+                        .ToList();
+                }
+
+                var enrolledUsers = await _context.UserCourses
+                    .Include(uc => uc.User)
+                    .Where(uc => uc.CourseId == id)
+                    .ToListAsync();
+
+                var model = new CourseDetailsViewModel
+                {
+                    Course = selectedCourse,
+                    PendingHomeworks = homeworks,
+                    EnrolledStudentsCount = enrolledUsers.Count,
+                    EnrolledStudents = enrolledUsers.Select(uc => uc.User).ToList(),
+                    CurrentStatus = status
+                };
+
+                ViewBag.Enrollments = enrolledUsers.ToDictionary(uc => uc.UserId, uc => uc.EnrollmentDate);
+
+                return PartialView("_CourseDetailsPartial", model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при загрузке частичного представления курса {id}");
+                return StatusCode(500, "Произошла ошибка при загрузке данных");
             }
         }
 
@@ -340,6 +422,219 @@
             }
 
             [HttpGet]
+            public async Task<IActionResult> ReviewLessonAssignments(int lessonId, string? studentId = null)
+            {
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+
+                    var lesson = await _context.Lessons
+                        .Include(l => l.Course)
+                        .Include(l => l.Homeworks)
+                            .ThenInclude(h => h.Student)
+                        .Include(l => l.Homeworks)
+                            .ThenInclude(h => h.Files)
+                        .Include(l => l.Homeworks)
+                            .ThenInclude(h => h.Comments)
+                                .ThenInclude(c => c.User)
+                        .FirstOrDefaultAsync(l => l.Id == lessonId && l.Course.TeacherId == teacherId);
+
+                    if (lesson == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Получаем всех студентов курса
+                    var enrolledStudents = await _context.UserCourses
+                        .Include(uc => uc.User)
+                        .Where(uc => uc.CourseId == lesson.CourseId)
+                        .Select(uc => uc.User)
+                        .ToListAsync();
+
+                    // Получаем все задания для этого урока
+                    var homeworks = await _context.Homeworks
+                        .Include(h => h.Comments)
+                        .Where(h => h.LessonId == lessonId && h.Status != HomeworkStatus.Cancelled)
+                        .ToListAsync();
+
+                    var studentsInfo = enrolledStudents.Select(student =>
+                    {
+                        var studentHomework = homeworks.FirstOrDefault(h => h.StudentId == student.Id);
+                        var newCommentsCount = 0;
+                        if (studentHomework != null)
+                        {
+                            // Подсчитываем новые комментарии (от студента после отправки задания)
+                            newCommentsCount = studentHomework.Comments
+                                .Count(c => c.UserId == student.Id && c.CreatedAt > studentHomework.SubmittedAt);
+                        }
+                        return new StudentAssignmentInfo
+                        {
+                            Student = student,
+                            Homework = studentHomework,
+                            NewCommentsCount = newCommentsCount
+                        };
+                    }).ToList();
+
+                    Homework? selectedHomework = null;
+                    if (!string.IsNullOrEmpty(studentId))
+                    {
+                        selectedHomework = await _context.Homeworks
+                            .Include(h => h.Student)
+                            .Include(h => h.Files)
+                            .Include(h => h.Comments)
+                                .ThenInclude(c => c.User)
+                            .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == studentId);
+                    }
+
+                    var model = new ReviewLessonAssignmentsViewModel
+                    {
+                        Lesson = lesson,
+                        Course = lesson.Course,
+                        Students = studentsInfo,
+                        SelectedHomework = selectedHomework,
+                        SelectedStudentId = studentId
+                    };
+
+                    return View(model);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при загрузке заданий урока {lessonId}");
+                    return StatusCode(500, "Произошла ошибка при загрузке данных");
+                }
+            }
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> AcceptAssignment(int homeworkId)
+            {
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+
+                    var homework = await _context.Homeworks
+                        .Include(h => h.Lesson)
+                            .ThenInclude(l => l.Course)
+                        .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+                    if (homework == null || homework.Lesson.Course.TeacherId != teacherId)
+                    {
+                        return NotFound();
+                    }
+
+                    homework.Status = HomeworkStatus.Approved;
+                    await _context.SaveChangesAsync();
+
+                    await _notificationService.CreateNotificationAsync(
+                        homework.StudentId,
+                        "Задание принято",
+                        $"Ваше задание по уроку \"{homework.Lesson.Title}\" было принято",
+                        NotificationType.HomeworkGraded,
+                        homeworkId
+                    );
+
+                    // Проверяем и выдаем сертификат
+                    await _certificateService.IssueCertificateIfEligibleAsync(homework.StudentId, homework.Lesson.CourseId);
+
+                    return RedirectToAction("ReviewLessonAssignments", new { lessonId = homework.LessonId, studentId = homework.StudentId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при принятии задания {homeworkId}");
+                    return StatusCode(500, "Произошла ошибка при сохранении");
+                }
+            }
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> RejectAssignment(int homeworkId)
+            {
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+
+                    var homework = await _context.Homeworks
+                        .Include(h => h.Lesson)
+                            .ThenInclude(l => l.Course)
+                        .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+                    if (homework == null || homework.Lesson.Course.TeacherId != teacherId)
+                    {
+                        return NotFound();
+                    }
+
+                    homework.Status = HomeworkStatus.Rejected;
+                    await _context.SaveChangesAsync();
+
+                    await _notificationService.CreateNotificationAsync(
+                        homework.StudentId,
+                        "Требуется доработка",
+                        $"Ваше задание по уроку \"{homework.Lesson.Title}\" требует доработки",
+                        NotificationType.HomeworkGraded,
+                        homeworkId
+                    );
+
+                    return RedirectToAction("ReviewLessonAssignments", new { lessonId = homework.LessonId, studentId = homework.StudentId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при отклонении задания {homeworkId}");
+                    return StatusCode(500, "Произошла ошибка при сохранении");
+                }
+            }
+
+            [HttpPost]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> AddHomeworkComment(int homeworkId, string text)
+            {
+                try
+                {
+                    var teacherId = _userManager.GetUserId(User);
+
+                    var homework = await _context.Homeworks
+                        .Include(h => h.Lesson)
+                            .ThenInclude(l => l.Course)
+                        .FirstOrDefaultAsync(h => h.Id == homeworkId);
+
+                    if (homework == null || homework.Lesson.Course.TeacherId != teacherId)
+                    {
+                        return NotFound();
+                    }
+
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        return BadRequest("Комментарий не может быть пустым");
+                    }
+
+                    var comment = new HomeworkComment
+                    {
+                        HomeworkId = homeworkId,
+                        UserId = teacherId,
+                        Text = text,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.HomeworkComments.Add(comment);
+                    await _context.SaveChangesAsync();
+
+                    await _notificationService.CreateNotificationAsync(
+                        homework.StudentId,
+                        "Новый комментарий",
+                        $"Преподаватель оставил комментарий к вашему заданию по уроку \"{homework.Lesson.Title}\"",
+                        NotificationType.HomeworkGraded,
+                        homeworkId
+                    );
+
+                    return RedirectToAction("ReviewLessonAssignments", new { lessonId = homework.LessonId, studentId = homework.StudentId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при добавлении комментария к заданию {homeworkId}");
+                    return StatusCode(500, "Произошла ошибка при сохранении комментария");
+                }
+            }
+
+            [HttpGet]
             public async Task<IActionResult> AddLesson(int courseId)
             {
                 try
@@ -408,11 +703,66 @@
                         return NotFound();
                     }
 
+                    // Автоматически вычисляем порядковый номер урока
+                    var maxOrder = await _context.Lessons
+                        .Where(l => l.CourseId == model.CourseId && (model.ModuleId == null ? l.ModuleId == null : l.ModuleId == model.ModuleId))
+                        .Select(l => (int?)l.Order)
+                        .MaxAsync() ?? 0;
+
+                    // Сначала валидируем файлы, если они есть
+                    if (model.Attachments != null && model.Attachments.Any())
+                    {
+                        // Определяем разрешенные расширения в зависимости от типа урока
+                        string[] allowedExtensions;
+                        if (model.Type == Models.LessonType.Video)
+                        {
+                            allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                        }
+                        else
+                        {
+                            allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        }
+
+                        foreach (var file in model.Attachments)
+                        {
+                            if (file.Length > 0)
+                            {
+                                var fileName = Path.GetFileName(file.FileName);
+                                var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
+                                
+                                if (model.Type != Models.LessonType.Video && (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif"))
+                                {
+                                    ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
+                                }
+                                else if (!allowedExtensions.Contains(fileExtension))
+                                {
+                                    var errorMsg = model.Type == Models.LessonType.Video 
+                                        ? $"Для типа 'Видео' можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV). Недопустимый формат: {fileName}"
+                                        : $"Недопустимый формат файла: {fileName}";
+                                    ModelState.AddModelError("Attachments", errorMsg);
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
+                                }
+                            }
+                        }
+                    }
+
                     var lesson = new Lesson
                     {
                         Title = model.Title,
-                        Order = model.Order,
+                        Order = maxOrder + 1,
                         Content = model.Content,
+                        Type = model.Type,
                         CourseId = model.CourseId,
                         ModuleId = model.ModuleId,
                         CreatedAt = DateTime.UtcNow
@@ -427,7 +777,17 @@
                         var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
                         Directory.CreateDirectory(uploadPath);
 
-                        var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        // Определяем разрешенные расширения в зависимости от типа урока
+                        string[] allowedExtensions;
+                        if (lesson.Type == Models.LessonType.Video)
+                        {
+                            allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                        }
+                        else
+                        {
+                            allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                        }
+
                         foreach (var file in model.Attachments)
                         {
                             if (file.Length > 0)
@@ -436,17 +796,6 @@
                                 var fileName = Path.GetFileName(file.FileName);
                                 var filePath = Path.Combine(uploadPath, fileName);
                                 var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
-                                
-                                if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
-                                {
-                                    ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
-                                    return View(model);
-                                }
-                                else if (!allowedExtensions.Contains(fileExtension))
-                                {
-                                    ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
-                                    return View(model);
-                                }
                                 try
                                 {
                                     using var stream = new FileStream(filePath, FileMode.Create);
@@ -457,9 +806,35 @@
                                 {
                                     _logger.LogError(ex, $"Ошибка при сохранении файла {fileName}");
                                     ModelState.AddModelError("Attachments", $"Ошибка при сохранении файла {fileName}: {ex.Message}");
+                                    
+                                    // Если произошла ошибка при сохранении файла, удаляем урок
+                                    _context.Lessons.Remove(lesson);
+                                    await _context.SaveChangesAsync();
+                                    
+                                    model.Modules = await _context.Modules
+                                        .Where(m => m.CourseId == model.CourseId)
+                                        .OrderBy(m => m.OrderNumber)
+                                        .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                        .ToListAsync();
+                                    return View(model);
                                 }
                             }
                         }
+                    }
+
+                    // Проверяем, есть ли ошибки после сохранения файлов
+                    if (!ModelState.IsValid)
+                    {
+                        // Если есть ошибки, удаляем урок
+                        _context.Lessons.Remove(lesson);
+                        await _context.SaveChangesAsync();
+                        
+                        model.Modules = await _context.Modules
+                            .Where(m => m.CourseId == model.CourseId)
+                            .OrderBy(m => m.OrderNumber)
+                            .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                            .ToListAsync();
+                        return View(model);
                     }
 
                     _logger.LogInformation($"Урок успешно создан: {lesson.Title} (ID: {lesson.Id}) для курса {course.Title}");
@@ -528,8 +903,14 @@
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> CreateCourse(CreateCourseViewModel model)
                 {
+                _logger.LogInformation("CreateCourse POST called. Title: {Title}, ModelState.IsValid: {IsValid}", 
+                    model?.Title, ModelState.IsValid);
+                
                 if (!ModelState.IsValid)
                 {
+                    _logger.LogWarning("ModelState is invalid. Errors: {Errors}", 
+                        string.Join(", ", ModelState.SelectMany(x => x.Value.Errors).Select(e => e.ErrorMessage)));
+                    
                     var categories = await _context.CourseCategories
                         .OrderBy(c => c.Name)
                         .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
@@ -546,19 +927,63 @@
                 {
                     var teacherId = _userManager.GetUserId(User);
 
-                    string categoryName = null;
-                    if (model.CategoryId.HasValue)
+                    // Сохранение обложки курса
+                    string coverImagePath = null;
+                    if (model.CoverImage != null && model.CoverImage.Length > 0)
                     {
-                        var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
-                        categoryName = category?.Name;
+                        var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "course-covers");
+                        if (!Directory.Exists(uploadsFolder))
+                            Directory.CreateDirectory(uploadsFolder);
+
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                        var fileExtension = Path.GetExtension(model.CoverImage.FileName).ToLowerInvariant();
+                        
+                        if (!allowedExtensions.Contains(fileExtension))
+                        {
+                            ModelState.AddModelError("CoverImage", "Разрешены форматы: JPG, JPEG, PNG");
+                            var categories = await _context.CourseCategories
+                                .OrderBy(c => c.Name)
+                                .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                                {
+                                    Value = c.Id.ToString(),
+                                    Text = c.Name
+                                })
+                                .ToListAsync();
+                            model.Categories = categories;
+                            return View(model);
+                        }
+
+                        if (model.CoverImage.Length > 10 * 1024 * 1024)
+                        {
+                            ModelState.AddModelError("CoverImage", "Размер файла не должен превышать 10MB");
+                            var categories = await _context.CourseCategories
+                                .OrderBy(c => c.Name)
+                                .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                                {
+                                    Value = c.Id.ToString(),
+                                    Text = c.Name
+                                })
+                                .ToListAsync();
+                            model.Categories = categories;
+                            return View(model);
+                        }
+
+                        var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await model.CoverImage.CopyToAsync(stream);
+                        }
+                        coverImagePath = $"/uploads/course-covers/{uniqueFileName}";
                     }
 
                     var course = new Course
                     {
                         Title = model.Title,
-                        Description = model.Description,
-                        Category = categoryName,
+                        Description = model.ShortDescription,
+                        CategoryId = model.CategoryId,
                         DifficultyLevel = model.DifficultyLevel,
+                        CoverImagePath = coverImagePath,
                         TeacherId = teacherId,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -574,6 +999,18 @@
                 {
                     _logger.LogError(ex, "Ошибка при создании курса");
                     ModelState.AddModelError("", "Произошла ошибка при создании курса");
+                    
+                    // Загружаем категории обратно при ошибке
+                    var categories = await _context.CourseCategories
+                        .OrderBy(c => c.Name)
+                        .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                        {
+                            Value = c.Id.ToString(),
+                            Text = c.Name
+                        })
+                        .ToListAsync();
+                    model.Categories = categories;
+                    
                     return View(model);
                 }
             }
@@ -593,26 +1030,20 @@
                     {
                         Value = c.Id.ToString(),
                         Text = c.Name,
-                        Selected = c.Name == course.Category
+                        Selected = c.Id == course.CategoryId
                     })
                     .ToListAsync();
-
-                int? categoryId = null;
-                if (!string.IsNullOrEmpty(course.Category))
-                {
-                    var selectedCategory = await _context.CourseCategories
-                        .FirstOrDefaultAsync(c => c.Name == course.Category);
-                    categoryId = selectedCategory?.Id;
-                }
 
                 var model = new EditCourseViewModel
                 {
                     Id = course.Id,
                     Title = course.Title,
-                    Description = course.Description,
-                    CategoryId = categoryId,
+                    ShortDescription = course.Description,
+                    CategoryId = course.CategoryId,
                     Categories = categories,
-                    DifficultyLevel = course.DifficultyLevel
+                    DifficultyLevel = course.DifficultyLevel,
+                    ExistingCoverImagePath = course.CoverImagePath,
+                    Language = "Русский" // Можно добавить поле Language в модель Course позже
                 };
 
                 return View(model);
@@ -633,6 +1064,7 @@
                         })
                         .ToListAsync();
                     model.Categories = categories;
+                    model.ExistingCoverImagePath = (await _context.Courses.FindAsync(model.Id))?.CoverImagePath;
                     return View(model);
                 }
 
@@ -642,17 +1074,71 @@
                     return NotFound();
                 }
 
-                string categoryName = null;
-                if (model.CategoryId.HasValue)
+                // Сохранение новой обложки курса
+                string coverImagePath = course.CoverImagePath; // Сохраняем существующую
+                if (model.CoverImage != null && model.CoverImage.Length > 0)
                 {
-                    var category = await _context.CourseCategories.FindAsync(model.CategoryId.Value);
-                    categoryName = category?.Name;
+                    var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "course-covers");
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                    var fileExtension = Path.GetExtension(model.CoverImage.FileName).ToLowerInvariant();
+                    
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        ModelState.AddModelError("CoverImage", "Разрешены форматы: JPG, JPEG, PNG");
+                        var categories = await _context.CourseCategories
+                            .OrderBy(c => c.Name)
+                            .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                            {
+                                Value = c.Id.ToString(),
+                                Text = c.Name
+                            })
+                            .ToListAsync();
+                        model.Categories = categories;
+                        model.ExistingCoverImagePath = course.CoverImagePath;
+                        return View(model);
+                    }
+
+                    if (model.CoverImage.Length > 10 * 1024 * 1024)
+                    {
+                        ModelState.AddModelError("CoverImage", "Размер файла не должен превышать 10MB");
+                        var categories = await _context.CourseCategories
+                            .OrderBy(c => c.Name)
+                            .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                            {
+                                Value = c.Id.ToString(),
+                                Text = c.Name
+                            })
+                            .ToListAsync();
+                        model.Categories = categories;
+                        model.ExistingCoverImagePath = course.CoverImagePath;
+                        return View(model);
+                    }
+
+                    // Удаляем старую обложку, если была
+                    if (!string.IsNullOrEmpty(course.CoverImagePath))
+                    {
+                        var oldFilePath = Path.Combine(_environment.WebRootPath, course.CoverImagePath.TrimStart('/'));
+                        if (System.IO.File.Exists(oldFilePath))
+                            System.IO.File.Delete(oldFilePath);
+                    }
+
+                    var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.CoverImage.CopyToAsync(stream);
+                    }
+                    coverImagePath = $"/uploads/course-covers/{uniqueFileName}";
                 }
 
                 course.Title = model.Title;
-                course.Description = model.Description;
-                course.Category = categoryName;
+                course.Description = model.ShortDescription;
+                course.CategoryId = model.CategoryId;
                 course.DifficultyLevel = model.DifficultyLevel;
+                course.CoverImagePath = coverImagePath;
 
                 await _context.SaveChangesAsync();
 
@@ -709,6 +1195,7 @@
                     Title = lesson.Title,
                     Order = lesson.Order,
                     Content = lesson.Content,
+                    Type = lesson.Type,
                     CourseId = lesson.CourseId,
                     ExistingFiles = GetLessonFiles(lesson.Id),
                     ModuleId = lesson.ModuleId
@@ -747,8 +1234,9 @@
                     return NotFound();
 
                 lesson.Title = model.Title;
-                lesson.Order = model.Order;
+                // Order не изменяется при редактировании
                 lesson.Content = model.Content;
+                lesson.Type = model.Type;
                 lesson.ModuleId = model.ModuleId;
 
                 // Загрузка файлов
@@ -756,10 +1244,20 @@
                 {
                     var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "lessons", lesson.Id.ToString());
 
+                    // Определяем разрешенные расширения в зависимости от типа урока
+                    string[] allowedExtensions;
+                    if (lesson.Type == Models.LessonType.Video)
+                    {
+                        allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                    }
+                    else
+                    {
+                        allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
+                    }
+
                     if (!Directory.Exists(uploadPath))
                         Directory.CreateDirectory(uploadPath);
 
-                    var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png" };
                     foreach (var file in model.Attachments)
                     {
                         if (file.Length > 0)
@@ -769,14 +1267,29 @@
                             var filePath = Path.Combine(uploadPath, fileName);
                             var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
                             
-                            if (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif")
+                            if (lesson.Type != Models.LessonType.Video && (fileExtension == ".gif" || file.ContentType.ToLowerInvariant() == "image/gif"))
                             {
                                 ModelState.AddModelError("Attachments", "GIF-изображения не поддерживаются. Загрузите JPG или PNG.");
+                                model.ExistingFiles = GetLessonFiles(model.Id);
+                                model.Modules = await _context.Modules
+                                    .Where(m => m.CourseId == model.CourseId)
+                                    .OrderBy(m => m.OrderNumber)
+                                    .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                    .ToListAsync();
                                 return View(model);
                             }
                             else if (!allowedExtensions.Contains(fileExtension))
                             {
-                                ModelState.AddModelError("Attachments", $"Недопустимый формат файла: {fileName}");
+                                var errorMsg = lesson.Type == Models.LessonType.Video 
+                                    ? $"Для типа 'Видео' можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV). Недопустимый формат: {fileName}"
+                                    : $"Недопустимый формат файла: {fileName}";
+                                ModelState.AddModelError("Attachments", errorMsg);
+                                model.ExistingFiles = GetLessonFiles(model.Id);
+                                model.Modules = await _context.Modules
+                                    .Where(m => m.CourseId == model.CourseId)
+                                    .OrderBy(m => m.OrderNumber)
+                                    .Select(m => new SelectListItem { Value = m.Id.ToString(), Text = m.Title })
+                                    .ToListAsync();
                                 return View(model);
                             }
                             try
@@ -829,12 +1342,18 @@
                 return View(model);
             }
 
+            // Автоматически вычисляем порядковый номер модуля
+            var maxOrderNumber = await _context.Modules
+                .Where(m => m.CourseId == model.CourseId)
+                .Select(m => (int?)m.OrderNumber)
+                .MaxAsync() ?? 0;
+
             var module = new Module
             {
                 CourseId = model.CourseId,
                 Title = model.Title,
-                Description = model.Description,
-                OrderNumber = model.OrderNumber,
+                Description = null,
+                OrderNumber = maxOrderNumber + 1,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -940,7 +1459,7 @@
 
                     var homeworkFiles = _context.HomeworkFiles.Where(f => homeworkIds.Contains(f.HomeworkId));
                     var homeworks = _context.Homeworks.Where(h => homeworkIds.Contains(h.Id));
-                    var lessonComments = _context.LessonComments.Where(c => lessonIds.Contains(c.LessonId));
+                    var homeworkComments = _context.HomeworkComments.Where(c => homeworkIds.Contains(c.HomeworkId));
                     var userCourses = _context.UserCourses.Where(uc => uc.CourseId == id);
                     var reviews = _context.Reviews.Where(r => r.CourseId == id);
                     var modules = _context.Modules.Where(m => m.CourseId == id);
@@ -950,8 +1469,8 @@
                     var lessons = _context.Lessons.Where(l => lessonIds.Contains(l.Id));
 
                     _context.HomeworkFiles.RemoveRange(homeworkFiles);
+                    _context.HomeworkComments.RemoveRange(homeworkComments);
                     _context.Homeworks.RemoveRange(homeworks);
-                    _context.LessonComments.RemoveRange(lessonComments);
                     _context.Notifications.RemoveRange(notifications);
                     _context.UserCourses.RemoveRange(userCourses);
                     _context.Reviews.RemoveRange(reviews);

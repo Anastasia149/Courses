@@ -10,8 +10,13 @@ namespace Courses.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Categories");
+            // Безопасное удаление таблицы с проверкой существования
+            migrationBuilder.Sql(@"
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Categories')
+                BEGIN
+                    DROP TABLE [Categories];
+                END
+            ");
         }
 
         /// <inheritdoc />

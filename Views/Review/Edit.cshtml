@@ -1,0 +1,197 @@
+@model Courses.ViewModels.CreateReviewViewModel
+@{
+    ViewData["Title"] = "Редактировать отзыв";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Редактировать отзыв на курс: @Model.CourseTitle</h4>
+                </div>
+                <div class="card-body">
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger">
+                            @TempData["ErrorMessage"]
+                        </div>
+                    }
+
+                    <form asp-action="Edit" asp-controller="Review" method="post">
+                        <input type="hidden" name="id" value="@ViewBag.ReviewId" />
+                        <input type="hidden" asp-for="CourseId" />
+                        <input type="hidden" asp-for="CourseTitle" />
+
+                        <div class="mb-3">
+                            <label asp-for="Rating" class="form-label">Оценка *</label>
+                            <div class="rating-input">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    var ratingId = $"rating{i}";
+                                    <input type="radio" asp-for="Rating" value="@i" id="@ratingId" data-rating="@i" />
+                                    <label for="@ratingId" class="star-label" data-rating="@i">
+                                        <i class="fas fa-star"></i>
+                                    </label>
+                                }
+                            </div>
+                            <span asp-validation-for="Rating" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Отзыв</label>
+                            <textarea asp-for="Description" class="form-control" rows="5" 
+                                      placeholder="Расскажите о вашем опыте прохождения курса..." 
+                                      maxlength="1000"></textarea>
+                            <small class="text-muted">Максимум 1000 символов</small>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" asp-controller="Review" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">Отмена</a>
+                            <button type="submit" class="btn btn-primary">Обновить отзыв</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .rating-input {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+
+    .rating-input input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        margin: 0;
+        padding: 0;
+        pointer-events: none;
+    }
+
+    .rating-input .star-label {
+        cursor: pointer;
+        font-size: 2rem;
+        color: #ddd;
+        transition: color 0.2s;
+    }
+
+    .rating-input .star-label:hover,
+    .rating-input .star-label:hover ~ .star-label {
+        color: #ffc107 !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Rating script loaded');
+        
+        const ratingContainer = document.querySelector('.rating-input');
+        const ratingInputs = document.querySelectorAll('.rating-input input[type="radio"]');
+        const starLabels = document.querySelectorAll('.rating-input .star-label');
+        
+        console.log('Found inputs:', ratingInputs.length, 'Found labels:', starLabels.length);
+        
+        if (!ratingContainer || ratingInputs.length === 0 || starLabels.length === 0) {
+            console.error('Rating elements not found!');
+            return;
+        }
+        
+        function updateStars() {
+            const checkedInput = document.querySelector('.rating-input input[type="radio"]:checked');
+            const selectedRating = checkedInput ? parseInt(checkedInput.value) : 0;
+            
+            starLabels.forEach((label) => {
+                const starRating = parseInt(label.getAttribute('data-rating'));
+                
+                // Сбрасываем все стили
+                label.style.removeProperty('color');
+                
+                if (selectedRating > 0 && starRating <= selectedRating) {
+                    label.style.setProperty('color', '#ffc107', 'important');
+                } else {
+                    label.style.setProperty('color', '#ddd', 'important');
+                }
+            });
+        }
+        
+        // Используем делегирование событий на контейнере
+        ratingContainer.addEventListener('click', function(e) {
+            const label = e.target.closest('.star-label');
+            if (!label) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const rating = parseInt(label.getAttribute('data-rating'));
+            const labelFor = label.getAttribute('for');
+            
+            // Пробуем найти input по id, если не получается - по data-rating
+            let correspondingInput = document.getElementById(labelFor);
+            if (!correspondingInput) {
+                correspondingInput = document.querySelector(`input[data-rating="${rating}"]`);
+            }
+            
+            console.log('Label clicked, rating:', rating, 'labelFor:', labelFor, 'input found:', correspondingInput);
+            
+            if (correspondingInput && correspondingInput.type === 'radio') {
+                // Снимаем выбор со всех radio buttons в группе
+                ratingInputs.forEach(input => {
+                    input.checked = false;
+                });
+                
+                // Явно выбираем radio button
+                correspondingInput.checked = true;
+                
+                // Триггерим событие change для обновления состояния
+                const changeEvent = new Event('change', { bubbles: true });
+                correspondingInput.dispatchEvent(changeEvent);
+                
+                // Обновляем визуальное состояние
+                updateStars();
+                
+                console.log('Input selected, value:', correspondingInput.value, 'checked:', correspondingInput.checked);
+            } else {
+                console.error('Input not found for rating:', rating, 'labelFor:', labelFor);
+            }
+        });
+        
+        // Обработка hover для подсветки звезд при наведении
+        starLabels.forEach((label) => {
+            label.addEventListener('mouseenter', function() {
+                const hoverRating = parseInt(label.getAttribute('data-rating'));
+                starLabels.forEach((l) => {
+                    const lRating = parseInt(l.getAttribute('data-rating'));
+                    if (lRating <= hoverRating) {
+                        l.style.setProperty('color', '#ffc107', 'important');
+                    }
+                });
+            });
+            
+            label.addEventListener('mouseleave', function() {
+                updateStars(); // Восстанавливаем состояние выбранного рейтинга
+            });
+        });
+        
+        ratingInputs.forEach(input => {
+            input.addEventListener('change', updateStars);
+        });
+        
+        // Инициализация при загрузке страницы
+        updateStars();
+    });
+</script>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+

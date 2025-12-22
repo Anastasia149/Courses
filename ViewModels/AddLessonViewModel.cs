@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Courses.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -11,15 +12,17 @@ namespace Courses.ViewModels
         [Display(Name = "Название")]
         public string Title { get; set; }
 
-        [Required(ErrorMessage = "Порядок урока обязателен")]
-        [Range(1, 100, ErrorMessage = "Порядок должен быть от 1 до 100")]
-        [Display(Name = "Порядок")]
+        // Order вычисляется автоматически в контроллере
         public int Order { get; set; }
 
         [Required(ErrorMessage = "Содержание урока обязательно")]
         [DataType(DataType.MultilineText)]
         [Display(Name = "Содержание")]
         public string Content { get; set; }
+
+        [Required(ErrorMessage = "Тип урока обязателен")]
+        [Display(Name = "Тип урока")]
+        public LessonType Type { get; set; } = LessonType.Lecture;
 
         public int CourseId { get; set; }
 

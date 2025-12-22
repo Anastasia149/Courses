@@ -8,31 +8,28 @@ $(function() {
             var currentUserId = data.currentUserId;
             var isTeacher = data.isTeacher;
             var html = '';
-            comments.forEach(function(c) {
-                html += `<div class="mb-2 border rounded p-2">
-                    <b>${c.userName}</b> <span class="text-muted" style="font-size:0.9em">${new Date(c.createdAt).toLocaleString()}</span><br>
-                    ${escapeHtml(c.text)}
-                    <div>`;
-                if (c.userId === currentUserId || isTeacher) {
-                    html += `<a href="#" class="delete-comment-link text-danger me-2" data-id="${c.id}">Удалить</a>`;
-                }
-                html += `<a href="#" class="reply-link" data-id="${c.id}">Ответить</a>`;
-                html += `</div>`;
-                if (c.replies && c.replies.length) {
-                    c.replies.forEach(function(r) {
-                        html += `<div class="ms-4 mt-2 border-start ps-2">
-                            <b>${r.userName}</b> <span class="text-muted" style="font-size:0.9em">${new Date(r.createdAt).toLocaleString()}</span><br>
-                            ${escapeHtml(r.text)}
-                            <div>`;
-                        if (r.userId === currentUserId || isTeacher) {
-                            html += `<a href=\"#\" class=\"delete-comment-link text-danger me-2\" data-id=\"${r.id}\">Удалить</a>`;
-                        }
-                        html += `</div>`;
-                        html += `</div>`;
-                    });
-                }
-                html += `</div>`;
-            });
+            
+            if (comments.length === 0) {
+                html = '<div class="text-muted text-center py-3">Пока нет комментариев. Будьте первым!</div>';
+            } else {
+                comments.forEach(function(c) {
+                    html += `<div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(c.userName)}</span>
+                            <span class="comment-date">${new Date(c.createdAt).toLocaleString('ru-RU')}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(c.text)}</div>`;
+                    if (c.userId === currentUserId || isTeacher) {
+                        html += `<div class="comment-actions">
+                            <a href="#" class="delete-comment-link text-danger" data-id="${c.id}">
+                                <i class="fas fa-trash me-1"></i>Удалить
+                            </a>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            
             $('#commentsList').html(html);
         });
     }
@@ -42,26 +39,16 @@ $(function() {
     $('#addCommentForm').on('submit', function(e) {
         e.preventDefault();
         var text = $('#commentText').val();
-        var parentId = $('#parentCommentId').val() || null;
-        $.post('/LessonComment/AddComment', { lessonId: lessonId, text: text, parentCommentId: parentId }, function() {
+        if (!text || text.trim() === '') {
+            alert('Введите комментарий');
+            return;
+        }
+        $.post('/LessonComment/AddComment', { lessonId: lessonId, text: text }, function() {
             $('#commentText').val('');
-            $('#parentCommentId').val('');
-            $('#cancelReply').hide();
             loadComments();
+        }).fail(function() {
+            alert('Ошибка при добавлении комментария. Убедитесь, что вы отправили задание.');
         });
-    });
-
-    $('#commentsList').on('click', '.reply-link', function(e) {
-        e.preventDefault();
-        var id = $(this).data('id');
-        $('#parentCommentId').val(id);
-        $('#commentText').focus();
-        $('#cancelReply').show();
-    });
-
-    $('#cancelReply').on('click', function() {
-        $('#parentCommentId').val('');
-        $(this).hide();
     });
 
     // Удаление комментария

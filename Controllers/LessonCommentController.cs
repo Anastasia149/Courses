@@ -1,6 +1,7 @@
 using Courses.Data;
 using Courses.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -11,22 +12,32 @@ namespace Courses.Controllers
     public class LessonCommentController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public LessonCommentController(AppDbContext context)
+        public LessonCommentController(AppDbContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetComments(int lessonId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = _userManager.GetUserId(User);
             var isTeacher = User.IsInRole("Teacher");
-            var comments = await _context.LessonComments
+            
+            // Получаем все комментарии к урокам (ко всем заданиям этого урока)
+            // Это позволяет видеть комментарии всех студентов к уроку
+            var allHomeworksForLesson = await _context.Homeworks
+                .Where(h => h.LessonId == lessonId && h.Status != HomeworkStatus.Cancelled)
+                .Select(h => h.Id)
+                .ToListAsync();
+
+            var comments = await _context.HomeworkComments
                 .Include(c => c.User)
-                .Include(c => c.Replies).ThenInclude(r => r.User)
-                .Where(c => c.LessonId == lessonId && c.ParentCommentId == null)
-                .OrderByDescending(c => c.CreatedAt)
+                .Include(c => c.Homework)
+                .Where(c => allHomeworksForLesson.Contains(c.HomeworkId))
+                .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
 
             var result = comments.Select(c => new
@@ -35,66 +46,109 @@ namespace Courses.Controllers
                 c.Text,
                 c.CreatedAt,
                 c.UserId,
-                UserName = c.User.UserName,
-                Replies = c.Replies.OrderBy(r => r.CreatedAt).Select(r => new
-                {
-                    r.Id,
-                    r.Text,
-                    r.CreatedAt,
-                    r.UserId,
-                    UserName = r.User.UserName
-                })
+                UserName = c.User.FullName ?? c.User.UserName
             });
 
             return Json(new { comments = result, currentUserId = userId, isTeacher });
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddComment(int lessonId, string text, int? parentCommentId)
+        public async Task<IActionResult> AddComment(int lessonId, string text)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = _userManager.GetUserId(User);
             if (string.IsNullOrWhiteSpace(text))
                 return BadRequest();
 
             if (string.IsNullOrEmpty(userId))
                 return Forbid("UserId is null!");
 
-            if (text != null && text.Length > 600)
-                return BadRequest("Комментарий не должен превышать 600 символов.");
+            if (text.Length > 1000)
+                return BadRequest("Комментарий не должен превышать 1000 символов.");
 
-            var comment = new LessonComment
+            // Получаем или создаем homework для студента
+            var homework = await _context.Homeworks
+                .FirstOrDefaultAsync(h => h.LessonId == lessonId && h.StudentId == userId && h.Status != HomeworkStatus.Cancelled);
+
+            // Если задания нет, создаем пустое задание для возможности комментирования
+            if (homework == null)
             {
-                LessonId = lessonId,
+                var lesson = await _context.Lessons.FindAsync(lessonId);
+                if (lesson == null)
+                {
+                    return BadRequest("Урок не найден.");
+                }
+
+                homework = new Homework
+                {
+                    LessonId = lessonId,
+                    StudentId = userId,
+                    Answer = "", // Пустой ответ
+                    Status = HomeworkStatus.Pending,
+                    SubmittedAt = DateTime.UtcNow
+                };
+                _context.Homeworks.Add(homework);
+                await _context.SaveChangesAsync();
+            }
+
+            var comment = new HomeworkComment
+            {
+                HomeworkId = homework.Id,
                 UserId = userId,
                 Text = text,
-                ParentCommentId = parentCommentId
+                CreatedAt = DateTime.UtcNow
             };
-            _context.LessonComments.Add(comment);
+            
+            _context.HomeworkComments.Add(comment);
             await _context.SaveChangesAsync();
 
             return Ok();
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteComment(int commentId)
+        public async Task<IActionResult> DeleteComment(int commentId, string returnUrl = null)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = _userManager.GetUserId(User);
             var isTeacher = User.IsInRole("Teacher");
-            var comment = await _context.LessonComments
-                .Include(c => c.Replies)
+            
+            var comment = await _context.HomeworkComments
+                .Include(c => c.Homework)
+                    .ThenInclude(h => h.Lesson)
+                        .ThenInclude(l => l.Course)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
+                
             if (comment == null)
                 return NotFound();
-            if (comment.UserId != userId && !isTeacher)
-                return Forbid();
-            // Удаляем все дочерние комментарии
-            if (comment.Replies != null && comment.Replies.Any())
+            
+            // Проверяем права:
+            // 1. Автор комментария может удалить свой комментарий
+            // 2. Преподаватель курса может удалить любой комментарий к заданию своего курса
+            var isAuthor = comment.UserId == userId;
+            var isCourseTeacher = isTeacher && comment.Homework.Lesson.Course.TeacherId == userId;
+            
+            if (!isAuthor && !isCourseTeacher)
             {
-                _context.LessonComments.RemoveRange(comment.Replies);
+                return Forbid();
             }
-            _context.LessonComments.Remove(comment);
+            
+            var homeworkId = comment.HomeworkId;
+            var lessonId = comment.Homework.LessonId;
+            var studentId = comment.Homework.StudentId;
+            
+            _context.HomeworkComments.Remove(comment);
             await _context.SaveChangesAsync();
-            return Ok();
+            
+            // Если это преподаватель, редиректим на страницу просмотра заданий
+            if (isTeacher && !string.IsNullOrEmpty(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            else if (isTeacher)
+            {
+                return RedirectToAction("ReviewLessonAssignments", "Teacher", new { lessonId = lessonId, studentId = studentId });
+            }
+            
+            // Для студентов редиректим обратно на страницу урока
+            return RedirectToAction("CourseDetails", "Student", new { id = comment.Homework.Lesson.CourseId, lessonId = lessonId });
         }
     }
 } 

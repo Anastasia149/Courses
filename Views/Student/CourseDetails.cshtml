@@ -3,109 +3,1017 @@
 @model StudentCourseDetailsViewModel
 @{
     ViewData["Title"] = Model.Title;
-    <link rel="stylesheet" href="~/css/course-details.css" />
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <nav aria-label="breadcrumb">
+<div class="course-details-content">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-action="Course">Мои курсы</a></li>
+            <li class="breadcrumb-item"><a asp-action="Course">Моё обучение</a></li>
             <li class="breadcrumb-item active">@Model.Title</li>
         </ol>
     </nav>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6>Уроки</h6>
-                </div>
-                <div class="list-group list-group-flush">
-                    @foreach (var lesson in Model.Lessons.OrderBy(l => l.Order))
+    <!-- Course Header Section -->
+    <div class="course-header-section mb-5">
+        <div class="row">
+            <div class="col-md-4 mb-4 mb-md-0">
+                <div class="course-thumbnail">
+                    @if (!string.IsNullOrEmpty(Model.CoverImagePath))
                     {
-                        <a class="list-group-item list-group-item-action @(Model.SelectedLesson?.Id == lesson.Id ? "active" : "")"
-                           asp-action="CourseDetails" asp-route-id="@Model.CourseId" asp-route-lessonId="@lesson.Id">
-                            @lesson.Order. @lesson.Title
-                        </a>
+                        <img src="@Model.CoverImagePath" alt="@Model.Title" class="img-fluid rounded" onerror="this.src='/images/homePage.jpg';">
+                    }
+                    else
+                    {
+                        <img src="/images/homePage.jpg" alt="@Model.Title" class="img-fluid rounded">
                     }
                 </div>
             </div>
-            <!-- Форма домашки для выбранного урока - показывается только при выборе урока -->
-        </div>
-        <div class="col-md-8">
-            @if (Model.SelectedLesson != null)
-            {
-                <div class="card">
-                    <div class="card-header">
-                        <h4>@Model.SelectedLesson.Title</h4>
-                    </div>
-                    <div class="card-body">
-                        @Html.Raw(Model.SelectedLesson.Description)
-                        @if (Model.SelectedLesson.Files != null && Model.SelectedLesson.Files.Any())
-                        {
-                            <div class="mt-3">
-                                <strong>Материалы:</strong>
-                                <div class="materials-list d-flex flex-wrap gap-2 mt-2">
-                                    @foreach (var file in Model.SelectedLesson.Files)
-                                    {
-                                        <div class="material-card p-2 border rounded bg-light d-flex align-items-center" style="min-width: 220px;">
-                                            @if (file.FileName.ToLower().EndsWith(".jpg") || file.FileName.ToLower().EndsWith(".jpeg") || file.FileName.ToLower().EndsWith(".png") || file.FileName.ToLower().EndsWith(".gif"))
-                                            {
-                                                <img src="@file.FilePath" alt="@file.FileName" style="max-width:60px;max-height:60px;object-fit:cover;margin-right:10px;" />
-                                            }
-                                            else
-                                            {
-                                                <i class="fas fa-file-alt fa-2x me-2 text-primary"></i>
-                                            }
-                                            <a href="@file.FilePath" target="_blank">@file.FileName</a>
-                                        </div>
-                                    }
-                                </div>  
-                            </div>
-                        }
-                        
-                        <!-- Форма домашки для выбранного урока -->
-                        <div class="mt-4">
-                            @if (Model.SelectedLesson.HasHomework && Model.SelectedLesson.HomeworkStatus == Courses.Models.HomeworkStatus.Approved)
+            <div class="col-md-8">
+                <h1 class="course-title-header mb-3">@Model.Title</h1>
+                
+                <!-- Rating -->
+                @if (Model.TotalReviews > 0)
+                {
+                    <div class="course-rating mb-3">
+                        <span class="rating-value">@Model.AverageRating.ToString("F1")</span>
+                        <div class="stars-inline">
+                            @for (int i = 1; i <= 5; i++)
                             {
-                                <div class="alert alert-success mb-3">
-                                    <i class="fas fa-check-circle"></i> Задание принято!
+                                <i class="fas fa-star @(i <= Math.Round(Model.AverageRating) ? "active" : "")"></i>
+                            }
+                        </div>
+                        <span class="reviews-count">(@Model.TotalReviews @(Model.TotalReviews == 1 ? "отзыв" : Model.TotalReviews < 5 ? "отзыва" : "отзывов"))</span>
+                    </div>
+                }
+
+                <!-- Progress -->
+                <div class="course-progress-section mb-4">
+                    <div class="progress-label-row mb-2">
+                        <span class="progress-label">Ваш прогресс:</span>
+                        <span class="progress-percentage">@Model.ProgressPercentage%</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-fill" style="width: @Model.ProgressPercentage%"></div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="course-action-buttons d-flex flex-wrap gap-2">
+                    @{
+                        var firstUncompletedLesson = Model.Modules
+                            .SelectMany(m => m.Lessons)
+                            .Concat(Model.Lessons)
+                            .Where(l => !l.IsCompleted)
+                            .OrderBy(l => l.Order)
+                            .FirstOrDefault();
+                    }
+                    @if (firstUncompletedLesson != null)
+                    {
+                        <a asp-action="Lesson" asp-route-id="@firstUncompletedLesson.Id" class="btn btn-continue-learning">
+                            <i class="fas fa-play me-2"></i>Продолжить обучение
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="#" class="btn btn-continue-learning" onclick="return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-check me-2"></i>Курс завершен
+                        </a>
+                    }
+                    <form asp-action="LeaveCourse" method="post" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите покинуть курс?');">
+                        <input type="hidden" name="courseId" value="@Model.CourseId" />
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-leave-course">
+                            <i class="fas fa-sign-out-alt me-2"></i>Покинуть курс
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Content Section -->
+    <div class="course-content-section">
+        <h2 class="section-title mb-4">Содержание курса</h2>
+        
+        <!-- Filters -->
+        <div class="content-filters mb-4">
+            <button class="filter-btn active" data-filter="all">
+                Все уроки
+            </button>
+            <button class="filter-btn" data-filter="assignments">
+                Только задания
+            </button>
+            <button class="filter-btn" data-filter="unfinished">
+                Незавершенные
+            </button>
+        </div>
+
+        <!-- Modules and Lessons -->
+        <div class="modules-container">
+            @if (Model.Modules.Any())
+            {
+            @foreach (var module in Model.Modules.OrderBy(m => m.OrderNumber))
+            {
+                <div class="module-card" data-module-id="@module.Id">
+                    <div class="module-header" onclick="toggleModule(@module.Id)">
+                        <div class="module-title-section">
+                            <h3 class="module-title">@module.Title</h3>
+                            <div class="module-progress">
+                                <span class="progress-text">Завершено: @module.CompletedLessons из @module.TotalLessons уроков</span>
+                                <div class="module-progress-bar">
+                                    <div class="module-progress-fill" style="width: @(module.TotalLessons > 0 ? (module.CompletedLessons * 100 / module.TotalLessons) : 0)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down module-toggle"></i>
+                    </div>
+                    <div class="module-content show" id="module-@module.Id">
+                        <div class="module-lessons">
+                            @foreach (var lesson in module.Lessons.OrderBy(l => l.Order))
+                            {
+                                <div class="lesson-item @(lesson.IsCompleted ? "completed" : "") @(lesson.HasHomework ? "has-assignment" : "")" 
+                                     data-lesson-type="@(lesson.LessonType == Courses.Models.LessonType.Video ? "video" : lesson.LessonType == Courses.Models.LessonType.Message ? "message" : lesson.LessonType == Courses.Models.LessonType.Assignment ? "assignment" : "lesson")"
+                                     data-completed="@lesson.IsCompleted.ToString().ToLower()">
+                                    <div class="lesson-icon">
+                                        @switch (lesson.LessonType)
+                                        {
+                                            case Courses.Models.LessonType.Assignment:
+                                                <i class="fas fa-tasks"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Video:
+                                                <i class="fas fa-video"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Message:
+                                                <i class="fas fa-comment"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Lecture:
+                                            default:
+                                                <i class="fas fa-file-alt"></i>
+                                                break;
+                                        }
+                                    </div>
+                                    <div class="lesson-content">
+                                        <div class="lesson-title-row">
+                                            <h4 class="lesson-title">@lesson.Title</h4>
+                                            @if (lesson.IsCompleted)
+                                            {
+                                                <i class="fas fa-check-circle lesson-status-icon completed-icon"></i>
+                                            }
+                                            else if (lesson.IsViewed)
+                                            {
+                                                <i class="fas fa-eye lesson-status-icon viewed-icon"></i>
+                                            }
+                                        </div>
+                                        @if (lesson.HasHomework && lesson.DueDate.HasValue)
+                                        {
+                                            <div class="lesson-meta">
+                                                <span class="due-date">Срок: @lesson.DueDate.Value.ToString("yyyy-MM-dd")</span>
+                                            </div>
+                                        }
+                                        @if (lesson.HasHomework && lesson.HomeworkStatus == HomeworkStatus.Approved)
+                                        {
+                                            <div class="lesson-meta">
+                                                <span class="homework-status approved">Принято (@(lesson.HomeworkStatus == HomeworkStatus.Approved ? "9/10" : ""))</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="lesson-actions">
+                                        @if (lesson.IsCompleted)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-review">
+                                                Повторить
+                                            </a>
+                                        }
+                                        else if (lesson.IsViewed)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-review">
+                                                Повторить
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-start">
+                                                Начать
+                                            </a>
+                                        }
+                                        @if (lesson.HasHomework && lesson.HomeworkStatus == HomeworkStatus.Approved)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-feedback">
+                                                Просмотр отзыва
+                                            </a>
+                                        }
+                                    </div>
                                 </div>
                             }
-                            @await Html.PartialAsync("_HomeworkSubmission", Model.SelectedLesson)
-                        </div>
-                        
-                        <!-- Комментарии -->
-                        <script>
-                            window.lessonIdForComments = @Model.SelectedLesson.Id;
-                        </script>
-                        <div class="mt-4">
-                            <h5>Комментарии</h5>
-                            <div id="commentsList"></div>
-                            <form id="addCommentForm" class="mt-3">
-                                <input type="hidden" id="parentCommentId" name="parentCommentId" value="" />
-                                <div class="mb-2">
-                                    <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required maxlength="600"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
-                                <button type="button" class="btn btn-secondary btn-sm" id="cancelReply" style="display:none;">Отмена</button>
-                            </form>
                         </div>
                     </div>
                 </div>
             }
-            else
+            }
+
+            <!-- Lessons without module -->
+            @if (Model.Lessons.Any())
             {
-                <div class="card">
-                    <div class="card-body text-center py-5">
-                        <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Выберите урок из списка для просмотра материала</h5>
+                <div class="module-card" data-module-id="0">
+                    <div class="module-header" onclick="toggleModule(0)">
+                        <div class="module-title-section">
+                            <h3 class="module-title">Дополнительные материалы</h3>
+                            <div class="module-progress">
+                                @{
+                                    var lessonsWithHomework = Model.Lessons.Where(l => l.LessonType == Courses.Models.LessonType.Assignment || l.LessonType == Courses.Models.LessonType.Video).ToList();
+                                    var completedLessonsWithHomework = lessonsWithHomework.Count(l => l.IsCompleted);
+                                    var totalLessonsWithHomework = lessonsWithHomework.Count;
+                                }
+                                <span class="progress-text">Завершено: @completedLessonsWithHomework из @totalLessonsWithHomework уроков</span>
+                                <div class="module-progress-bar">
+                                    <div class="module-progress-fill" style="width: @(totalLessonsWithHomework > 0 ? (completedLessonsWithHomework * 100 / totalLessonsWithHomework) : 0)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down module-toggle"></i>
+                    </div>
+                    <div class="module-content show" id="module-0">
+                        <div class="module-lessons">
+                            @foreach (var lesson in Model.Lessons.OrderBy(l => l.Order))
+                            {
+                                <div class="lesson-item @(lesson.IsCompleted ? "completed" : "") @(lesson.HasHomework ? "has-assignment" : "")" 
+                                     data-lesson-type="@(lesson.LessonType == Courses.Models.LessonType.Video ? "video" : lesson.LessonType == Courses.Models.LessonType.Message ? "message" : lesson.LessonType == Courses.Models.LessonType.Assignment ? "assignment" : "lesson")"
+                                     data-completed="@lesson.IsCompleted.ToString().ToLower()">
+                                    <div class="lesson-icon">
+                                        @switch (lesson.LessonType)
+                                        {
+                                            case Courses.Models.LessonType.Assignment:
+                                                <i class="fas fa-tasks"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Video:
+                                                <i class="fas fa-video"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Message:
+                                                <i class="fas fa-comment"></i>
+                                                break;
+                                            case Courses.Models.LessonType.Lecture:
+                                            default:
+                                                <i class="fas fa-file-alt"></i>
+                                                break;
+                                        }
+                                    </div>
+                                    <div class="lesson-content">
+                                        <div class="lesson-title-row">
+                                            <h4 class="lesson-title">@lesson.Title</h4>
+                                            @if (lesson.IsCompleted)
+                                            {
+                                                <i class="fas fa-check-circle lesson-status-icon completed-icon"></i>
+                                            }
+                                            else if (lesson.IsViewed)
+                                            {
+                                                <i class="fas fa-eye lesson-status-icon viewed-icon"></i>
+                                            }
+                                        </div>
+                                        @if (lesson.HasHomework && lesson.DueDate.HasValue)
+                                        {
+                                            <div class="lesson-meta">
+                                                <span class="due-date">Срок: @lesson.DueDate.Value.ToString("yyyy-MM-dd")</span>
+                                            </div>
+                                        }
+                                        @if (lesson.HasHomework && lesson.HomeworkStatus == HomeworkStatus.Approved)
+                                        {
+                                            <div class="lesson-meta">
+                                                <span class="homework-status approved">Принято (@(lesson.HomeworkStatus == HomeworkStatus.Approved ? "9/10" : ""))</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="lesson-actions">
+                                        @if (lesson.IsCompleted)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-review">
+                                                Повторить
+                                            </a>
+                                        }
+                                        else if (lesson.IsViewed)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-review">
+                                                Повторить
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-start">
+                                                Начать
+                                            </a>
+                                        }
+                                        @if (lesson.HasHomework && lesson.HomeworkStatus == HomeworkStatus.Approved)
+                                        {
+                                            <a asp-action="Lesson" asp-route-id="@lesson.Id" class="btn btn-sm btn-feedback">
+                                                Просмотр отзыва
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             }
         </div>
     </div>
-</div> 
+
+</div>
+
+<style>
+    .course-details-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    /* Course Header Section */
+    .course-header-section {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .course-thumbnail img {
+        width: 100%;
+        height: auto;
+        max-height: 300px;
+        object-fit: cover;
+    }
+
+    .course-title-header {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .course-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .rating-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .stars-inline {
+        display: flex;
+        gap: 2px;
+    }
+
+    .stars-inline i {
+        color: #ddd;
+        font-size: 1rem;
+    }
+
+    .stars-inline i.active {
+        color: #ffc107;
+    }
+
+    .reviews-count {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .course-progress-section {
+        max-width: 500px;
+    }
+
+    .progress-label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .progress-label {
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .progress-percentage {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .progress-bar-wrapper {
+        width: 100%;
+        height: 10px;
+        background-color: #e5e7eb;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+        border-radius: 5px;
+        transition: width 0.3s ease;
+    }
+
+    /* Action Buttons */
+    .course-action-buttons {
+        margin-top: 1.5rem;
+    }
+
+    .btn-continue-learning {
+        background-color: #1a1a1a;
+        color: #fff;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .btn-continue-learning:hover {
+        background-color: #2d2d2d;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .btn-leave-course {
+        background-color: #fff;
+        color: #1a1a1a;
+        border: 1px solid #e5e7eb;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .btn-leave-course:hover {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+    }
+
+    /* Course Content Section */
+    .course-content-section {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    /* Filters */
+    .content-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        padding: 0.5rem 1.25rem;
+        border: 1px solid #e5e7eb;
+        background-color: #fff;
+        color: #1a1a1a;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+    }
+
+    .filter-btn.active {
+        background-color: #1a1a1a;
+        color: #fff;
+        border-color: #1a1a1a;
+    }
+
+    /* Module Card */
+    .module-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .module-header {
+        background-color: #f9fafb;
+        padding: 1.25rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s ease;
+    }
+
+    .module-header:hover {
+        background-color: #f3f4f6;
+    }
+
+    .module-title-section {
+        flex: 1;
+    }
+
+    .module-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .module-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .progress-text {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .module-progress-bar {
+        width: 100%;
+        max-width: 300px;
+        height: 6px;
+        background-color: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .module-progress-fill {
+        height: 100%;
+        background-color: #1976d2;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .module-toggle {
+        color: #666;
+        transition: transform 0.2s ease;
+    }
+
+    .module-header.active .module-toggle {
+        transform: rotate(180deg);
+    }
+
+    .module-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .module-content.show {
+        max-height: 5000px;
+    }
+
+    /* Lesson Items */
+    .module-lessons {
+        padding: 0;
+    }
+
+    .lesson-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f3f4f6;
+        transition: background-color 0.2s ease;
+    }
+
+    .lesson-item:last-child {
+        border-bottom: none;
+    }
+
+    .lesson-item:hover {
+        background-color: #f9fafb;
+    }
+
+    .lesson-item.completed {
+        background-color: #f0fdf4;
+    }
+
+    .lesson-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .lesson-item.has-assignment .lesson-icon {
+        background-color: #fef3c7;
+        color: #f59e0b;
+    }
+
+    .lesson-item:not(.has-assignment) .lesson-icon {
+        background-color: #dbeafe;
+        color: #3b82f6;
+    }
+
+    /* Стили для разных типов уроков */
+    .lesson-item[data-lesson-type="video"] .lesson-icon {
+        background-color: #fce7f3;
+        color: #ec4899;
+    }
+
+    .lesson-item[data-lesson-type="message"] .lesson-icon {
+        background-color: #e0e7ff;
+        color: #6366f1;
+    }
+
+    .lesson-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .lesson-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .lesson-title {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .lesson-status-icon {
+        font-size: 1rem;
+    }
+
+    .completed-icon {
+        color: #10b981;
+    }
+
+    .viewed-icon {
+        color: #6b7280;
+    }
+
+    .lesson-meta {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+
+    .due-date {
+        color: #dc2626;
+    }
+
+    .homework-status.approved {
+        color: #10b981;
+        font-weight: 500;
+    }
+
+    .lesson-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .btn-review,
+    .btn-start,
+    .btn-feedback {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-review {
+        background-color: #e5e7eb;
+        color: #1a1a1a;
+    }
+
+    .btn-review:hover {
+        background-color: #d1d5db;
+    }
+
+    .btn-start {
+        background-color: #1976d2;
+        color: #fff;
+    }
+
+    .btn-start:hover {
+        background-color: #1565c0;
+    }
+
+    .btn-feedback {
+        background-color: #10b981;
+        color: #fff;
+    }
+
+    .btn-feedback:hover {
+        background-color: #059669;
+    }
+
+    /* Hide filtered items */
+    .lesson-item.hidden {
+        display: none;
+    }
+
+    /* Selected Lesson Content Styles */
+    .selected-lesson-content {
+        margin-top: 2rem;
+    }
+
+    .lesson-content-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+    .lesson-content-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        padding: 1.5rem;
+    }
+
+    .lesson-content-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #fff;
+        margin: 0;
+    }
+
+    .btn-close-lesson {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-close-lesson:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+    }
+
+    .lesson-content-body {
+        padding: 2rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 1rem;
+    }
+
+    .lesson-description-section {
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .lesson-description {
+        color: #374151;
+        line-height: 1.6;
+    }
+
+    .lesson-materials-section {
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .material-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+        transition: all 0.2s ease;
+        min-width: 150px;
+    }
+
+    .material-card:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+        transform: translateY(-2px);
+    }
+
+    .material-preview {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .material-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .material-icon {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #dbeafe;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+
+    .material-icon i {
+        font-size: 2rem;
+        color: #3b82f6;
+    }
+
+    .material-link {
+        color: #1a1a1a;
+        text-decoration: none;
+        font-size: 0.875rem;
+        text-align: center;
+        word-break: break-word;
+    }
+
+    .material-link:hover {
+        color: #1976d2;
+        text-decoration: underline;
+    }
+
+    .homework-section {
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .comments-section {
+        padding-top: 1.5rem;
+    }
+
+    .comments-list {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+
+    .comment-item {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    .comment-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .comment-author {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .comment-date {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .comment-text {
+        color: #374151;
+        line-height: 1.5;
+        margin-bottom: 0.5rem;
+    }
+
+    .comment-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .comment-form {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    @@media (max-width: 768px) {
+        .course-title-header {
+            font-size: 1.5rem;
+        }
+
+        .course-action-buttons {
+            flex-direction: column;
+        }
+
+        .course-action-buttons .btn {
+            width: 100%;
+        }
+
+        .lesson-item {
+            flex-wrap: wrap;
+        }
+
+        .lesson-actions {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .lesson-actions .btn {
+            flex: 1;
+        }
+
+        .lesson-content-body {
+            padding: 1rem;
+        }
+
+        .lesson-content-title {
+            font-size: 1.5rem;
+        }
+
+        .materials-list {
+            flex-direction: column;
+        }
+
+        .material-card {
+            width: 100%;
+        }
+    }
+</style>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/homework-submission.js"></script>
 <script src="~/js/lesson-comments.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filter functionality
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const lessonItems = document.querySelectorAll('.lesson-item');
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                filterButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+
+                const filter = this.getAttribute('data-filter');
+
+                lessonItems.forEach(item => {
+                    const lessonType = item.getAttribute('data-lesson-type');
+                    const isCompleted = item.getAttribute('data-completed') === 'true';
+
+                    if (filter === 'all') {
+                        item.classList.remove('hidden');
+                    } else if (filter === 'assignments') {
+                        if (lessonType === 'assignment') {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    } else if (filter === 'unfinished') {
+                        if (!isCompleted) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    }
+                });
+            });
+        });
+
+    });
+
+    function toggleModule(moduleId) {
+        const moduleContent = document.getElementById('module-' + moduleId);
+        const moduleHeader = moduleContent.previousElementSibling;
+        
+        if (moduleContent.classList.contains('show')) {
+            moduleContent.classList.remove('show');
+            moduleHeader.classList.remove('active');
+        } else {
+            moduleContent.classList.add('show');
+            moduleHeader.classList.add('active');
+        }
+    }
+</script>

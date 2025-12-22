@@ -1,91 +1,331 @@
 ﻿@model Courses.ViewModels.EditLessonViewModel
-
 @{
     ViewData["Title"] = "Редактирование урока";
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h2><i class="fas fa-edit me-2"></i>Редактирование урока</h2>
+<div class="create-course-page">
+    <!-- Header -->
+    <div class="course-header">
+        <div class="header-left">
+            <h1 class="page-title">Редактирование урока</h1>
+            <div class="auto-saved-indicator">
+                <i class="fas fa-check-circle text-success me-1"></i>
+                <span>Auto-saved</span>
+            </div>
         </div>
+        <div class="header-actions">
+            <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-outline-secondary">
+                Отмена
+            </a>
+            <button type="button" class="btn btn-outline-secondary" id="saveDraftBtn">
+                <i class="fas fa-save me-2"></i>Сохранить черновик
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="previewBtn">
+                <i class="fas fa-eye me-2"></i>Предпросмотр
+            </button>
+        </div>
+    </div>
 
-        <div class="card-body">
-            <form asp-action="EditLesson"
-                  method="post"
-                  enctype="multipart/form-data">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs course-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                Основное
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#materials" type="button" role="tab">
+                Материалы
+            </button>
+        </li>
+    </ul>
 
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="basic" role="tabpanel">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <h5>Ошибки валидации:</h5>
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                </div>
+            }
+            <form asp-action="EditLesson" method="post" enctype="multipart/form-data" id="lessonForm">
+                @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="Id" />
                 <input type="hidden" asp-for="CourseId" />
 
-                <div class="mb-3">
-                    <label asp-for="Title" class="form-label">Название урока</label>
-                    <input asp-for="Title" class="form-control" />
+                <!-- Lesson Title -->
+                <div class="form-group mb-4">
+                    <label asp-for="Title" class="form-label">
+                        Название урока <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="Title" class="form-control form-control-lg" placeholder="Введите название урока" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="Order" class="form-label">Порядковый номер</label>
-                    <input asp-for="Order" class="form-control" type="number" min="1" />
-                    <span asp-validation-for="Order" class="text-danger"></span>
+                <!-- Module -->
+                <div class="form-group mb-4">
+                    <label asp-for="ModuleId" class="form-label">Модуль</label>
+                    <div class="d-flex gap-2">
+                        <select asp-for="ModuleId" asp-items="Model.Modules" class="form-select">
+                            <option value="">Без модуля</option>
+                        </select>
+                        <a asp-action="CreateModule" asp-route-courseId="@Model.CourseId" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-2"></i>Создать модуль
+                        </a>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="Content" class="form-label">Содержание</label>
-                    <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                <!-- Lesson Type -->
+                <div class="form-group mb-4">
+                    <label asp-for="Type" class="form-label">
+                        Тип урока <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="Type" class="form-select">
+                        <option value="0">Лекция</option>
+                        <option value="1">Сообщение</option>
+                        <option value="2">Задание</option>
+                        <option value="3">Видео</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        <strong>Лекция/Сообщение:</strong> студенты могут только комментировать и скачивать материалы<br/>
+                        <strong>Задание:</strong> студенты могут отправлять файлы для проверки преподавателем<br/>
+                        <strong>Видео:</strong> студенты могут отправлять задания, преподаватель может загружать только видео
+                    </small>
+                    <span asp-validation-for="Type" class="text-danger"></span>
+                </div>
+
+                <!-- Content -->
+                <div class="form-group mb-4">
+                    <label asp-for="Content" class="form-label">
+                        Содержание урока <span class="text-danger">*</span>
+                    </label>
+                    <textarea asp-for="Content" class="form-control" rows="10" 
+                              placeholder="Введите содержание урока"></textarea>
                     <span asp-validation-for="Content" class="text-danger"></span>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="ModuleId" class="form-label">Модуль</label>
-                    <select asp-for="ModuleId" asp-items="Model.Modules" class="form-select">
-                        <option value="">Без модуля</option>
-                    </select>
+                <!-- Submit button -->
+                <div class="form-actions mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Сохранить изменения
+                    </button>
                 </div>
+            </form>
+        </div>
 
-                <div class="mb-4">
-                    <label class="form-label">Прикрепить дополнительные материалы</label>
-                    <input type="file" name="Attachments" multiple class="form-control" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />
-                    <small class="form-text text-muted">Вы можете загрузить видео, изображения, PDF и т.д.</small>
-                </div>
-
+        <!-- Materials Tab -->
+        <div class="tab-pane fade" id="materials" role="tabpanel">
+            <div class="materials-content">
+                <!-- Existing Files -->
                 @if (Model.ExistingFiles != null && Model.ExistingFiles.Any())
                 {
-                    <div class="mb-3">
-                        <label class="form-label">Загруженные файлы:</label>
-                        <ul class="list-group">
+                    <div class="form-group mb-4">
+                        <label class="form-label">Загруженные файлы</label>
+                        <div class="existing-files-list">
                             @foreach (var file in Model.ExistingFiles)
                             {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>@file.FileName</span>
-                                    <a class="btn btn-sm btn-outline-danger"
+                                <div class="file-item mb-2 p-3 bg-light rounded d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-file"></i>
+                                        <span>@file.FileName</span>
+                                    </div>
+                                    <a class="btn btn-sm btn-outline-danger" 
                                        asp-action="DeleteLessonFile"
                                        asp-route-lessonId="@Model.Id"
                                        asp-route-fileName="@file.FileName"
                                        onclick="return confirm('Удалить файл?')">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
-                                </li>
+                                </div>
                             }
-                        </ul>
+                        </div>
                     </div>
                 }
 
-                <div class="d-flex justify-content-between pt-3">
-                    <a asp-action="CourseDetails" asp-route-id="@Model.CourseId" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Назад
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Сохранить изменения
-                    </button>
+                <!-- Add New Files -->
+                <div class="form-group mb-4">
+                    <label class="form-label">Добавить новые материалы</label>
+                    <label for="attachmentsInput" class="file-upload-area" id="attachmentsUploadArea">
+                        <input type="file" name="Attachments" id="attachmentsInput" form="lessonForm" class="d-none" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />
+                        <div class="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                            <p class="mb-1">Нажмите для загрузки или перетащите файлы</p>
+                            <p class="text-muted small" id="fileTypesHint">PDF, DOC, DOCX, TXT, JPG, JPEG, PNG</p>
+                        </div>
+                        <div id="attachmentsPreview" class="attachments-preview"></div>
+                    </label>
+                    <small class="form-text text-muted">Вы можете загрузить несколько файлов одновременно</small>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/create-course.css" asp-append-version="true" />
+    <style>
+        .attachments-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+
+        .attachment-item .remove-attachment {
+            cursor: pointer;
+            color: #dc3545;
+        }
+
+        .existing-files-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+}
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        $(document).ready(function() {
+            // Синхронизация файлов из вкладки Materials с формой
+            var attachmentsFiles = [];
+            
+            // Обновление accept атрибута в зависимости от типа урока
+            function updateFileAccept() {
+                var lessonType = $('#Type').val();
+                var fileInput = $('#attachmentsInput');
+                var hint = $('#fileTypesHint');
+                
+                if (lessonType == '3') { // Video
+                    fileInput.attr('accept', '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv');
+                    hint.text('MP4, AVI, MOV, WMV, FLV, WEBM, MKV');
+                } else {
+                    fileInput.attr('accept', '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png');
+                    hint.text('PDF, DOC, DOCX, TXT, JPG, JPEG, PNG');
+                }
+            }
+            
+            // Обновляем при изменении типа урока
+            $('#Type').on('change', updateFileAccept);
+            updateFileAccept(); // Инициализация
+            
+            $('#attachmentsInput').on('change', function(e) {
+                var lessonType = $('#Type').val();
+                var files = Array.from(e.target.files);
+                
+                // Валидация для видео
+                if (lessonType == '3') {
+                    var videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'];
+                    var invalidFiles = files.filter(function(file) {
+                        var ext = '.' + file.name.split('.').pop().toLowerCase();
+                        return !videoExtensions.includes(ext);
+                    });
+                    
+                    if (invalidFiles.length > 0) {
+                        alert('Для типа "Видео" можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV)');
+                        return;
+                    }
+                }
+                
+                attachmentsFiles = attachmentsFiles.concat(files);
+                updateAttachmentsPreview();
+            });
+
+            function updateAttachmentsPreview() {
+                var preview = $('#attachmentsPreview');
+                preview.empty();
+                
+                if (attachmentsFiles.length === 0) {
+                    $('.upload-placeholder').removeClass('d-none');
+                    return;
+                }
+                
+                $('.upload-placeholder').addClass('d-none');
+                
+                attachmentsFiles.forEach(function(file, index) {
+                    var item = $('<div class="attachment-item">' +
+                        '<i class="fas fa-file"></i>' +
+                        '<span>' + file.name + '</span>' +
+                        '<i class="fas fa-times remove-attachment" data-index="' + index + '"></i>' +
+                        '</div>');
+                    preview.append(item);
+                });
+            }
+
+            $(document).on('click', '.remove-attachment', function() {
+                var index = $(this).data('index');
+                attachmentsFiles.splice(index, 1);
+                updateAttachmentsPreview();
+                
+                // Обновляем input
+                var dt = new DataTransfer();
+                attachmentsFiles.forEach(function(file) {
+                    dt.items.add(file);
+                });
+                $('#attachmentsInput')[0].files = dt.files;
+            });
+
+            // Drag and drop для материалов
+            $('#attachmentsUploadArea').on('dragover', function(e) {
+                e.preventDefault();
+                $(this).addClass('dragover');
+            });
+
+            $('#attachmentsUploadArea').on('dragleave', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+            });
+
+            $('#attachmentsUploadArea').on('drop', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+                var lessonType = $('#Type').val();
+                var files = Array.from(e.originalEvent.dataTransfer.files);
+                
+                // Валидация для видео
+                if (lessonType == '3') {
+                    var videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'];
+                    var invalidFiles = files.filter(function(file) {
+                        var ext = '.' + file.name.split('.').pop().toLowerCase();
+                        return !videoExtensions.includes(ext);
+                    });
+                    
+                    if (invalidFiles.length > 0) {
+                        alert('Для типа "Видео" можно загружать только видео файлы (MP4, AVI, MOV, WMV, FLV, WEBM, MKV)');
+                        return;
+                    }
+                }
+                
+                attachmentsFiles = attachmentsFiles.concat(files);
+                updateAttachmentsPreview();
+                
+                // Обновляем input
+                var dt = new DataTransfer();
+                attachmentsFiles.forEach(function(file) {
+                    dt.items.add(file);
+                });
+                $('#attachmentsInput')[0].files = dt.files;
+            });
+        });
+    </script>
 }

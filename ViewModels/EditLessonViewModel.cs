@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Courses.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -13,11 +14,15 @@ namespace Courses.ViewModels
         [Required]
         public string Title { get; set; }
 
-        [Required]
+        // Order не изменяется при редактировании
         public int Order { get; set; }
 
         [DataType(DataType.MultilineText)]
         public string Content { get; set; }
+
+        [Required(ErrorMessage = "Тип урока обязателен")]
+        [Display(Name = "Тип урока")]
+        public LessonType Type { get; set; } = LessonType.Lecture;
 
         public List<IFormFile> Attachments { get; set; } = new();
 

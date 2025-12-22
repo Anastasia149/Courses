@@ -1,0 +1,185 @@
+@model Courses.ViewModels.CourseReviewsViewModel
+@{
+    ViewData["Title"] = $"Отзывы о курсе: {Model.CourseTitle}";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var course = ViewBag.Course as Courses.Models.Course;
+    var otherReviews = ViewBag.OtherReviews as List<Courses.Models.Review>;
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Student" asp-action="Course">Моё обучение</a></li>
+            <li class="breadcrumb-item active">Отзывы о курсе</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-star me-2"></i>Отзывы о курсе: @Model.CourseTitle
+                </h4>
+                @if (Model.TotalReviews > 0)
+                {
+                    <div class="rating-summary">
+                        <span class="average-rating">@Model.AverageRating.ToString("F1")</span>
+                        <div class="stars-inline">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <i class="fas fa-star @(i <= Math.Round(Model.AverageRating) ? "active" : "")"></i>
+                            }
+                        </div>
+                        <span class="reviews-count">(@Model.TotalReviews @(Model.TotalReviews == 1 ? "отзыв" : Model.TotalReviews < 5 ? "отзыва" : "отзывов"))</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+
+            <!-- Информация о курсе -->
+            @if (course != null)
+            {
+                <div class="course-info mb-4 p-3 bg-light rounded">
+                    <p class="mb-1"><strong>Преподаватель:</strong> @course.Teacher?.FullName</p>
+                    <p class="mb-0"><strong>Описание:</strong> @course.Description</p>
+                </div>
+            }
+
+            <!-- Отзыв текущего пользователя -->
+            @if (Model.HasUserReview && Model.UserReview != null)
+            {
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-2"><strong>Ваш отзыв:</strong></h6>
+                            <div class="stars-inline mb-2">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="fas fa-star @(i <= Model.UserReview.Rating ? "active" : "")"></i>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(Model.UserReview.Description))
+                            {
+                                <p class="mb-2">@Model.UserReview.Description</p>
+                            }
+                            <small class="text-muted">@Model.UserReview.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                        </div>
+                        <div class="ms-3">
+                            <a asp-action="Edit" asp-route-id="@Model.UserReview.Id" class="btn btn-sm btn-outline-primary me-2">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </a>
+                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить отзыв?');">
+                                <input type="hidden" name="id" value="@Model.UserReview.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mb-4">
+                    <a asp-action="Create" asp-route-courseId="@Model.CourseId" class="btn btn-primary">
+                        <i class="fas fa-star me-2"></i>Оставить отзыв
+                    </a>
+                </div>
+            }
+
+            <!-- Отзывы других студентов -->
+            @if (otherReviews != null && otherReviews.Any())
+            {
+                <h5 class="mb-3">Отзывы других студентов</h5>
+                <div class="reviews-list">
+                    @foreach (var review in otherReviews)
+                    {
+                        <div class="review-item border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <strong>@review.User.FullName</strong>
+                                    <div class="stars-inline mt-1">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fas fa-star @(i <= review.Rating ? "active" : "")"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                            </div>
+                            @if (!string.IsNullOrEmpty(review.Description))
+                            {
+                                <p class="mb-0">@review.Description</p>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else if (!Model.HasUserReview)
+            {
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-comments fa-3x mb-3"></i>
+                    <p>Пока нет отзывов. Будьте первым!</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .rating-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .average-rating {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .stars-inline {
+        display: flex;
+        gap: 2px;
+    }
+
+    .stars-inline i {
+        color: #ddd;
+        font-size: 0.9rem;
+    }
+
+    .stars-inline i.active {
+        color: #ffc107;
+    }
+
+    .reviews-count {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .review-item:last-child {
+        border-bottom: none !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .course-info {
+        background-color: #f8f9fa;
+    }
+</style>
+

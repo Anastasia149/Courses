@@ -2,562 +2,315 @@
 @model TeacherCoursesViewModel
 @{
     ViewData["Title"] = "Мои курсы";
-    <link rel="stylesheet" href="~/css/course.css" />
-    // Получаем выбранный lessonId из query или берем первый урок
-    var selectedLessonId = Context.Request.Query["lessonId"].FirstOrDefault();
-    int lessonIdInt = 0;
-    int.TryParse(selectedLessonId, out lessonIdInt);
-    var selectedLesson = Model?.SelectedCourse?.Course?.Lessons?.FirstOrDefault(l => l.Id == lessonIdInt)
-        ?? Model?.SelectedCourse?.Course?.Lessons?.OrderBy(l => l.Order).FirstOrDefault();
+    Layout = "~/Views/Shared/_TeacherLayout.cshtml";
 }
 
-<div class="teacher-courses-container">
-    <!-- Заголовок и кнопка создания -->
-    <div class="courses-header">
-        <h1 class="courses-title">Мои курсы</h1>
-        <a asp-controller="Teacher" asp-action="CreateCourse" class="btn btn-primary btn-create-course">
-            <i class="fas fa-plus"></i> Создать курс
+<div class="courses-page">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Мои курсы</h1>
+            <p class="page-subtitle">Управляйте и отслеживайте свои курсы</p>
+        </div>
+        <a asp-controller="Teacher" asp-action="CreateCourse" class="btn btn-primary btn-create">
+            <i class="fas fa-plus"></i> Создать новый курс
         </a>
     </div>
 
-    <!-- Основной контент -->
-    <div class="courses-content">
-        <!-- Список курсов -->
-        <div class="courses-sidebar">
-            <div class="card courses-list-card">
-                <div class="card-header">
-                    <h5>Все курсы</h5>
-                </div>
-                <div class="list-group courses-list">
-                    @if (Model?.Courses != null)
-                    {
+    <!-- Course Management Section -->
+    <div class="course-management">
+        <h2 class="section-title">Управление курсами</h2>
+        @if (Model?.Courses != null && Model.Courses.Any())
+        {
+            <div class="courses-table-container">
+                <table class="courses-table">
+                    <thead>
+                        <tr>
+                            <th>Курс</th>
+                            <th>Статус</th>
+                            <th>Студенты</th>
+                            <th>Рейтинг</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         @foreach (var course in Model.Courses)
                         {
-                            <div class="list-group-item course-item @(Model.SelectedCourse?.Course?.Id == course.Id ? "active" : "")">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id"
-                                       class="course-item-content flex-grow-1 text-decoration-none text-dark">
-                                        <h6 class="course-title mb-1">@course.Title</h6>
-                                        <div class="course-meta">
-                                            @if (course.Lessons?.Any(l => l.Homeworks?.Any(h => h.Status == HomeworkStatus.Pending) ?? false) ?? false)
+                            var studentsCount = course.UserCourses?.Count ?? 0;
+                            var averageRating = course.Reviews?.Any() == true 
+                                ? course.Reviews.Average(r => r.Rating) 
+                                : 0.0;
+                            var reviewsCount = course.Reviews?.Count ?? 0;
+                            
+                            <tr>
+                                <td>
+                                    <div class="course-info">
+                                        <div class="course-thumbnail">
+                                            @if (!string.IsNullOrEmpty(course.CoverImagePath))
                                             {
-                                                <span class="badge homeworks-count">
-                                                    <i class="fas fa-tasks"></i> @(course.Lessons?.Sum(l => l.Homeworks?.Count(h => h.Status == HomeworkStatus.Pending) ?? 0) ?? 0)
-                                                </span>
+                                                <img src="@course.CoverImagePath" alt="@course.Title" />
+                                            }
+                                            else
+                                            {
+                                                <img src="https://via.placeholder.com/80x60?text=@Uri.EscapeDataString(course.Title.Substring(0, Math.Min(10, course.Title.Length)))" 
+                                                     alt="@course.Title" />
                                             }
                                         </div>
-                                    </a>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- Детали курса -->
-        <div class="course-details-container">
-            @if (Model?.SelectedCourse?.Course != null)
-            {
-                <div class="card course-details-card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0">@Model.SelectedCourse.Course.Title</h4>
-                            <div class="course-actions">
-                                <!-- Заменяем текущие кнопки на dropdown -->
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                            type="button"
-                                            data-bs-toggle="dropdown">
-                                        <i class="fas fa-cog"></i> Действия
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li>
-                                            <a class="dropdown-item"
-                                               asp-controller="Teacher"
-                                               asp-action="EditCourse"
-                                               asp-route-id="@Model.SelectedCourse.Course.Id">
-                                                <i class="fas fa-edit me-1"></i> Редактировать
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item"
-                                               asp-controller="Teacher"
-                                               asp-action="AddLesson"
-                                               asp-route-courseId="@Model.SelectedCourse.Course.Id">
-                                                <i class="fas fa-plus me-1"></i> Добавить урок
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item"
-                                               asp-controller="CourseInvitation"
-                                               asp-action="Invite"
-                                               asp-route-courseId="@Model.SelectedCourse.Course.Id">
-                                                <i class="fas fa-user-plus me-1"></i> Пригласить студента
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <a class="dropdown-item text-danger"
-                                               href="#"
-                                               data-bs-toggle="modal"
-                                               data-bs-target="#deleteCourseModal"
-                                               data-course-id="@Model.SelectedCourse.Course.Id"
-                                               data-course-title="@Model.SelectedCourse.Course.Title">
-                                                <i class="fas fa-trash me-1"></i> Удалить курс
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-body">
-                        <!-- Навигация -->
-                        <ul class="nav nav-tabs" id="courseTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button">
-                                    Обзор
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#lessons" type="button">
-                                    Уроки
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#homeworks" type="button">
-                                    Сданные работы
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#students" type="button">
-                                    Студенты
-                                </button>
-                            </li>
-                        </ul>
-
-                        <!-- Содержимое вкладок -->
-                        <div class="tab-content mt-3">
-                            <!-- Вкладка "Обзор" -->
-                            <div class="tab-pane fade show active" id="overview" role="tabpanel">
-                                <div class="row stats-row">
-                                    <div class="col-md-4">
-                                        <div class="stat-card stat-students">
-                                            <div class="stat-icon">
-                                                <i class="fas fa-users"></i>
-                                            </div>
-                                            <div class="stat-content">
-                                                <div class="stat-title">Студентов</div>
-                                                <div class="stat-value">@(Model.SelectedCourse.EnrolledStudentsCount)</div>
-                                            </div>
+                                        <div class="course-details">
+                                            <div class="course-title">@course.Title</div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="stat-card stat-lessons">
-                                            <div class="stat-icon">
-                                                <i class="fas fa-book-open"></i>
-                                            </div>
-                                            <div class="stat-content">
-                                                <div class="stat-title">Уроков</div>
-                                                <div class="stat-value">@(Model.SelectedCourse.Course.Lessons?.Count ?? 0)</div>
-                                            </div>
-                                        </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-published">Опубликован</span>
+                                </td>
+                                <td>
+                                    <div class="students-info">
+                                        <i class="fas fa-users"></i>
+                                        <span>@studentsCount</span>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="stat-card stat-homeworks">
-                                            <div class="stat-icon">
-                                                <i class="fas fa-tasks"></i>
-                                            </div>
-                                            <div class="stat-content">
-                                                <div class="stat-title">Сданные работы</div>
-                                                <div class="stat-value">@(Model.SelectedCourse.PendingHomeworks?.Count ?? 0)</div>
-                                            </div>
-                                        </div>
+                                </td>
+                                <td>
+                                    <div class="rating-info">
+                                        <i class="fas fa-star"></i>
+                                        <span>@averageRating.ToString("F1")</span>
                                     </div>
-                                </div>
-
-                                <div class="course-description mt-4">
-                                    <h5>Описание курса</h5>
-                                    <div class="description-content mb-3">
-                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.Description))
-                                        {
-                                            @Html.Raw(Model.SelectedCourse.Course.Description)
-                                        }
-                                        else
-                                        {
-                                            <div class="text-muted">Описание отсутствует</div>
-                                        }
-                                    </div>
-
-                                    <h5 class="fw-semibold">Категория</h5>
-                                    <div class="mb-2">
-                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.Category))
-                                        {
-                                            @Model.SelectedCourse.Course.Category
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Не указана</span>
-                                        }
-                                    </div>
-
-                                    <h5 class="fw-semibold">Уровень сложности</h5>
-                                    <div>
-                                        @if (!string.IsNullOrWhiteSpace(Model.SelectedCourse.Course.DifficultyLevel))
-                                        {
-                                            @Model.SelectedCourse.Course.DifficultyLevel
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Не указан</span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Вкладка "Уроки" -->
-                            <div class="tab-pane fade" id="lessons" role="tabpanel">
-                                @if (Model.SelectedCourse.Course.Lessons?.Any() ?? false)
-                                {
-                                    var lessonsByModule = Model.SelectedCourse.Course.Lessons
-                                        .OrderBy(l => l.Module?.OrderNumber ?? int.MaxValue)
-                                        .ThenBy(l => l.Order)
-                                        .GroupBy(l => l.Module);
-
-                                    <div class="lessons-list">
-                                        @foreach (var moduleGroup in lessonsByModule)
-                                        {
-                                            <div class="card mb-3">
-                                                <div class="card-header d-flex justify-content-between align-items-center">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="fas fa-layer-group text-secondary"></i>
-                                                        <strong>@(moduleGroup.Key?.Title ?? "Без модуля")</strong>
-                                                    </div>
-                                                    @if (!string.IsNullOrWhiteSpace(moduleGroup.Key?.Description))
-                                                    {
-                                                        <small class="text-muted">@moduleGroup.Key.Description</small>
-                                                    }
-                                                </div>
-                                                <div class="card-body">
-                                                    @foreach (var lesson in moduleGroup)
-                                                    {
-                                                        <div class="lesson-item mb-3 pb-2 border-bottom">
-                                                            <div class="lesson-header d-flex justify-content-between">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                    <div class="lesson-order">@lesson.Order.</div>
-                                                                    <h5 class="lesson-title mb-0">@lesson.Title</h5>
-                                                                </div>
-                                                                <div class="lesson-actions d-flex align-items-center gap-2">
-                                                        <a asp-controller="Teacher" asp-action="EditLesson" asp-route-id="@lesson.Id"
-                                                                       class="btn btn-sm btn-outline-secondary">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                        <form asp-controller="Teacher" asp-action="DeleteLesson" method="post"
-                                                                          onsubmit="return confirm('Удалить этот урок?');" class="d-inline">
-                                                            <input type="hidden" name="id" value="@lesson.Id" />
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                            </div>
-                                                            <div class="lesson-meta d-flex align-items-center gap-3 mt-2">
-                                                                <span class="badge bg-light text-dark">
-                                                                    <i class="fas fa-file-alt"></i> @(lesson.Homeworks?.Count ?? 0) работ
-                                                                </span>
-                                                    <button type="button" class="btn btn-info btn-sm view-comments-btn" data-lesson-id="@lesson.Id" data-lesson-title="@lesson.Title">
-                                                        <i class="fas fa-comments"></i> Посмотреть комментарии
-                                                    </button>
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-info">
-                                        В этом курсе пока нет уроков
-                                    </div>
-                                }
-                            </div>
-
-                            <!-- Вкладка "Домашние задания" -->
-                            <div class="tab-pane fade" id="homeworks" role="tabpanel">
-                                @if ((Model.SelectedCourse.PendingHomeworks?.Any() ?? false) || Model.CurrentStatus == HomeworkStatus.Approved)
-                                {
-                                    <div class="homeworks-list">
-                                        <table class="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Студент</th>
-                                                    <th>Урок</th>
-                                                    <th>Дата сдачи</th>
-                                                    <th>Действия</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var hw in Model.SelectedCourse.PendingHomeworks ?? Enumerable.Empty<Homework>())
-                                                {
-                                                    <tr>
-                                                        <td>@(hw.Student?.FullName ?? "Неизвестный студент")</td>
-                                                        <td>@(hw.Lesson?.Title ?? "Неизвестный урок")</td>
-                                                        <td>@(hw.SubmittedAt.ToString("dd.MM.yyyy"))</td>
-                                                        <td>
-                                                            <a asp-controller="Teacher"
-                                                               asp-action="ReviewHomework"
-                                                               asp-route-homeworkId="@hw.Id"
-                                                               class="btn btn-sm @(hw.Status == HomeworkStatus.Approved ? "btn-info" : "btn-primary")">
-                                                                @(hw.Status == HomeworkStatus.Approved ? "Изменить оценку" : "Проверить")
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-success">
-                                        <i class="fas fa-check-circle"></i> Все работы проверены!
-                                    </div>
-                                }
-                            </div>
-
-                            <!-- Вкладка "Студенты" -->
-                            <div class="tab-pane fade" id="students" role="tabpanel">
-                                @if (Model.SelectedCourse.EnrolledStudents?.Any() ?? false)
-                                {
-                                    <div class="table-responsive">
-                                        <table class="table align-middle">
-                                            <thead>
-                                                <tr>
-                                                    <th>Имя</th>
-                                                    <th>Email</th>
-                                                    <th style="width: 120px;">Действия</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var student in Model.SelectedCourse.EnrolledStudents)
-                                                {
-                                                    <tr>
-                                                        <td>@student.FullName</td>
-                                                        <td>@student.Email</td>
-                                                        <td>
-                                                            <form asp-controller="Teacher"
-                                                                  asp-action="RemoveStudentFromCourse"
-                                                                  method="post"
-                                                                  class="d-inline"
-                                                                  onsubmit="return confirm('Удалить студента из курса?');">
-                                                                <input type="hidden" name="courseId" value="@Model.SelectedCourse.Course.Id" />
-                                                                <input type="hidden" name="userId" value="@student.Id" />
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
-                                                                    <i class="fas fa-user-minus"></i>
-                                                                </button>
-                                                                @Html.AntiForgeryToken()
-                                                            </form>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle"></i> В курсе пока нет студентов
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-book-open"></i>
-                    </div>
-                    <h4>Выберите курс</h4>
-                    <p class="text-muted">Для просмотра деталей выберите курс из списка</p>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно удаления курса -->
-<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Подтверждение удаления</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Вы действительно хотите удалить курс <strong id="courseTitleToDelete"></strong>?</p>
-                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Будут удалены все уроки и материалы курса!</p>
-                <div class="alert alert-warning mt-3">
-                    <i class="fas fa-info-circle"></i> После удаления вы будете перенаправлены к списку курсов
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <form id="deleteCourseForm" asp-controller="Teacher" asp-action="DeleteCourse" method="post">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-1"></i> Удалить
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="commentsModalTitle">Комментарии</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-            </div>
-            <div class="modal-body">
-                <div id="commentsList"></div>
-                <form id="addCommentForm" class="mt-3">
-                    <input type="hidden" id="parentCommentId" name="parentCommentId" value="" />
-                    <div class="mb-2">
-                        <textarea class="form-control" id="commentText" rows="2" placeholder="Добавить комментарий..." required maxlength="600"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="cancelReply" style="display:none;">Отмена</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно для просмотра файлов студентов -->
-<div class="modal fade" id="studentFilesModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Файлы студентов</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="studentFilesList">
-                    <!-- Здесь будут отображаться файлы -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        // Обработка модального окна удаления
-        $('#deleteCourseModal').on('show.bs.modal', function(event) {
-            const button = $(event.relatedTarget);
-            const courseId = button.data('course-id');
-            const courseTitle = button.data('course-title');
-
-            const modal = $(this);
-            modal.find('#courseTitleToDelete').text(courseTitle);
-            modal.find('#deleteCourseForm').attr('action', '/Teacher/DeleteCourse/' + courseId);
-        });
-
-        // Показ модального окна создания урока
-        function showCreateLessonModal(courseId) {
-            $('#modal-course-id').val(courseId);
-            $('#createLessonModal').modal('show');
-        }
-
-        // Обработка формы создания урока
-        $('#createLessonForm').submit(function (e) {
-            e.preventDefault();
-
-            const $form = $(this);
-            const actionUrl = $form.attr('action');
-
-            $.ajax({
-                url: actionUrl,
-                method: 'POST',
-                data: $form.serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#createLessonModal').modal('hide');
-                        window.location.reload();
-                    } else {
-                        alert('Ошибка: ' + (response.message || 'Неверные данные'));
-                    }
-                },
-                error: function (xhr) {
-                    let errorText = 'Ошибка при отправке';
-                    try {
-                        const responseJson = JSON.parse(xhr.responseText);
-                        if (responseJson && responseJson.errors) {
-                            errorText = responseJson.errors.join('\n');
-                        }
-                    } catch { /* noop */ }
-
-                    alert(errorText);
-                }
-            });
-        });
-
-        // Инициализация табов
-        $(document).ready(function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tab = urlParams.get('tab');
-            if (tab) {
-                $(`#courseTabs button[data-bs-target="#${tab}"]`).tab('show');
-            }
-        });
-
-        window.lessonIdForComments = @(selectedLesson?.Id ?? 0);
-
-        $(function() {
-            $('.view-files-btn').on('click', function() {
-                var lessonId = $(this).data('lesson-id');
-                var lessonTitle = $(this).data('lesson-title');
-                $('#studentFilesModal .modal-title').text('Файлы студентов: ' + lessonTitle);
-                
-                $.get('/Teacher/GetStudentFiles', { lessonId: lessonId }, function(files) {
-                    var html = '';
-                    if (files.length === 0) {
-                        html = '<div class="alert alert-info">Нет загруженных файлов</div>';
-                    } else {
-                        html = '<div class="list-group">';
-                        files.forEach(function(file) {
-                            html += `
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>${file.studentName}</strong>
-                                            <small class="text-muted ms-2">${new Date(file.submittedAt).toLocaleString()}</small>
-                                        </div>
-                                        <a href="${file.filePath}" class="btn btn-sm btn-outline-primary" target="_blank">
-                                            <i class="fas fa-download"></i> ${file.fileName}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a asp-controller="Teacher" asp-action="CourseDetails" asp-route-id="@course.Id" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Статистика
                                         </a>
                                     </div>
-                                </div>`;
-                        });
-                        html += '</div>';
-                    }
-                    $('#studentFilesList').html(html);
-                    $('#studentFilesModal').modal('show');
-                });
-            });
-        });
-    </script>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h3>У вас пока нет курсов</h3>
+                <p class="text-muted">Создайте свой первый курс, чтобы начать обучение студентов</p>
+                <a asp-controller="Teacher" asp-action="CreateCourse" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus"></i> Создать курс
+                </a>
+            </div>
+        }
+    </div>
+</div>
 
-    <script src="~/js/lesson-comments-modal.js"></script>
+@section Styles {
+    <style>
+        .courses-page {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .btn-create {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #000;
+            border-color: #000;
+            color: #fff;
+        }
+
+        .btn-create:hover {
+            background-color: #333;
+            border-color: #333;
+        }
+
+        .course-management {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+        }
+
+        .courses-table-container {
+            overflow-x: auto;
+        }
+
+        .courses-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .courses-table thead {
+            background-color: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .courses-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .courses-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .courses-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .course-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .course-thumbnail {
+            width: 80px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .course-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .course-details {
+            flex: 1;
+        }
+
+        .course-title {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 0.95rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-published {
+            background-color: #000;
+            color: #fff;
+        }
+
+        .status-draft {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .students-info,
+        .rating-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #4b5563;
+        }
+
+        .students-info i,
+        .rating-info i {
+            color: #9ca3af;
+        }
+
+        .rating-info i {
+            color: #fbbf24;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            color: #d1d5db;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        @@media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-create {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .courses-table {
+                font-size: 0.875rem;
+            }
+
+            .course-thumbnail {
+                width: 60px;
+                height: 45px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
 }

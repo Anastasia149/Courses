@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Courses.Data;
 using Courses.Models;
 using Courses.ViewModels;
+using Courses.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,20 +15,54 @@ namespace Courses.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<User> _userManager;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService;
 
         public HomeController(
             ILogger<HomeController> logger,
             UserManager<User> userManager,
-            AppDbContext context)
+            AppDbContext context,
+            INotificationService notificationService)
         {
             _logger = logger;
             _userManager = userManager;
             _context = context;
+            _notificationService = notificationService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            // Если пользователь авторизован, перенаправляем на соответствующую страницу
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                {
+                    return RedirectToAction("Index", "Teacher");
+                    }
+                    else if (await _userManager.IsInRoleAsync(user, "Student"))
+                    {
+                        return RedirectToAction("Course", "Student");
+                    }
+                }
+            }
+
+            // Получаем популярные курсы (по количеству студентов)
+            var popularCourses = await _context.Courses
+                .Include(c => c.Teacher)
+                .Include(c => c.UserCourses)
+                .Include(c => c.Reviews)
+                .OrderByDescending(c => c.UserCourses.Count)
+                .Take(3)
+                .ToListAsync();
+
+            var model = new HomeIndexViewModel
+            {
+                PopularCourses = popularCourses
+            };
+
+            return View(model);
         }
 
         [Authorize]
@@ -74,6 +109,10 @@ namespace Courses.Controllers
                 return NotFound();
             }
 
+            // Устанавливаем счетчик непрочитанных уведомлений для бокового меню
+            var userId = _userManager.GetUserId(User);
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
+
             var model = new TeacherProfileViewModel
             {
                 FullName = user.FullName,
@@ -92,6 +131,10 @@ namespace Courses.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
+
+            // Устанавливаем счетчик непрочитанных уведомлений для бокового меню
+            var userId = _userManager.GetUserId(User);
+            ViewBag.UnreadNotificationsCount = await _notificationService.GetUnreadNotificationsCountAsync(userId);
 
             // Устанавливаем текущий аватар для отображения
             model.ExistingAvatarPath = user.AvatarPath;
@@ -185,12 +228,55 @@ namespace Courses.Controllers
                 return NotFound();
             }
 
+            // Принудительно проверяем и очищаем неверный путь к аватару
+            if (user != null)
+            {
+                bool needsUpdate = false;
+                if (string.IsNullOrWhiteSpace(user.AvatarPath))
+                {
+                    if (user.AvatarPath != null)
+                    {
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(user.Id))
+                {
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (string.IsNullOrEmpty(fileName) || !fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        user.AvatarPath = null;
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate)
+                {
+                    await _userManager.UpdateAsync(user);
+                }
+            }
+
+            // Проверяем, что путь к аватару валиден и принадлежит пользователю
+            string? validAvatarPath = null;
+            if (!string.IsNullOrEmpty(user.AvatarPath) && !string.IsNullOrEmpty(user.Id))
+            {
+                if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                    user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                {
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (!string.IsNullOrEmpty(fileName) && fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        validAvatarPath = user.AvatarPath;
+                    }
+                }
+            }
+
             var model = new StudentProfileViewModel
             {
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                ExistingAvatarPath = user.AvatarPath
+                ExistingAvatarPath = validAvatarPath
             };
 
             return View(model);
@@ -205,8 +291,21 @@ namespace Courses.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
-            // Устанавливаем текущий аватар для отображения
-            model.ExistingAvatarPath = user.AvatarPath;
+            // Проверяем и устанавливаем валидный путь к аватару для отображения
+            string? validAvatarPath = null;
+            if (!string.IsNullOrEmpty(user.AvatarPath) && !string.IsNullOrEmpty(user.Id))
+            {
+                if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                    user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                {
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (!string.IsNullOrEmpty(fileName) && fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        validAvatarPath = user.AvatarPath;
+                    }
+                }
+            }
+            model.ExistingAvatarPath = validAvatarPath;
 
             // Проверяем файл аватара
             if (model.AvatarFile != null && model.AvatarFile.Length > 0)
@@ -278,11 +377,46 @@ namespace Courses.Controllers
                     return View(model);
                 }
 
+                // После сохранения проверяем и устанавливаем валидный путь к аватару
+                if (!string.IsNullOrEmpty(user.AvatarPath) && !string.IsNullOrEmpty(user.Id))
+                {
+                    if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                        user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                    {
+                        var fileName = Path.GetFileName(user.AvatarPath);
+                        if (!string.IsNullOrEmpty(fileName) && fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                        {
+                            model.ExistingAvatarPath = user.AvatarPath;
+                        }
+                    }
+                }
+                else
+                {
+                    model.ExistingAvatarPath = null;
+                }
+
                 TempData["SuccessMessage"] = "Профиль успешно обновлён!";
                 return RedirectToAction(nameof(Student));
             }
 
-            // Если ModelState невалиден
+            // Если ModelState невалиден, устанавливаем валидный путь к аватару для отображения
+            if (!string.IsNullOrEmpty(user.AvatarPath) && !string.IsNullOrEmpty(user.Id))
+            {
+                if (user.AvatarPath.StartsWith("/uploads/avatars/", StringComparison.Ordinal) || 
+                    user.AvatarPath.StartsWith("/avatars/", StringComparison.Ordinal))
+                {
+                    var fileName = Path.GetFileName(user.AvatarPath);
+                    if (!string.IsNullOrEmpty(fileName) && fileName.StartsWith(user.Id + "_", StringComparison.Ordinal))
+                    {
+                        model.ExistingAvatarPath = user.AvatarPath;
+                    }
+                }
+            }
+            else
+            {
+                model.ExistingAvatarPath = null;
+            }
+
             return View(model);
         }
 
