@@ -221,9 +221,14 @@
                         <div class="module-title-section">
                             <h3 class="module-title">Дополнительные материалы</h3>
                             <div class="module-progress">
-                                <span class="progress-text">Завершено: @Model.Lessons.Count(l => l.IsCompleted) из @Model.Lessons.Count уроков</span>
+                                @{
+                                    var lessonsWithHomework = Model.Lessons.Where(l => l.LessonType == Courses.Models.LessonType.Assignment || l.LessonType == Courses.Models.LessonType.Video).ToList();
+                                    var completedLessonsWithHomework = lessonsWithHomework.Count(l => l.IsCompleted);
+                                    var totalLessonsWithHomework = lessonsWithHomework.Count;
+                                }
+                                <span class="progress-text">Завершено: @completedLessonsWithHomework из @totalLessonsWithHomework уроков</span>
                                 <div class="module-progress-bar">
-                                    <div class="module-progress-fill" style="width: @(Model.Lessons.Count > 0 ? (Model.Lessons.Count(l => l.IsCompleted) * 100 / Model.Lessons.Count) : 0)%"></div>
+                                    <div class="module-progress-fill" style="width: @(totalLessonsWithHomework > 0 ? (completedLessonsWithHomework * 100 / totalLessonsWithHomework) : 0)%"></div>
                                 </div>
                             </div>
                         </div>

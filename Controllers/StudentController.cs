@@ -94,10 +94,15 @@ namespace Courses.Controllers
                         .SelectMany(l => l.Homeworks)
                         .Count(h => h.StudentId == userId && h.Status == HomeworkStatus.Pending),
                     CoverImagePath = uc.Course.CoverImagePath,
-                    ProgressPercentage = uc.Course.Lessons.Count > 0 
+                    ProgressPercentage = uc.Course.Lessons
+                        .Where(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video)
+                        .Count() > 0 
                         ? (int)Math.Round((double)uc.Course.Lessons
+                            .Where(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video)
                             .Count(l => l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved)) 
-                            / uc.Course.Lessons.Count * 100)
+                            / uc.Course.Lessons
+                                .Where(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video)
+                                .Count() * 100)
                         : 0
                 })
                 .ToListAsync();
@@ -181,10 +186,12 @@ namespace Courses.Controllers
 
             var courseData = userCourse.Course;
             var allLessons = courseData.Lessons.OrderBy(l => l.Order).ToList();
-            var completedLessonsCount = allLessons.Count(l => 
+            // Учитываем только уроки, где можно прикреплять файлы (Assignment и Video)
+            var lessonsWithHomework = allLessons.Where(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video).ToList();
+            var completedLessonsCount = lessonsWithHomework.Count(l => 
                 l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved));
-            var progressPercentage = allLessons.Count > 0 
-                ? (int)Math.Round((double)completedLessonsCount / allLessons.Count * 100) 
+            var progressPercentage = lessonsWithHomework.Count > 0 
+                ? (int)Math.Round((double)completedLessonsCount / lessonsWithHomework.Count * 100) 
                 : 0;
 
             // Получаем отзывы для курса
@@ -227,9 +234,10 @@ namespace Courses.Controllers
                             LessonType = l.Type
                         })
                         .ToList(),
-                    TotalLessons = m.Lessons.Count,
-                    CompletedLessons = m.Lessons.Count(l => 
-                        l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved))
+                    TotalLessons = m.Lessons.Count(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video),
+                    CompletedLessons = m.Lessons
+                        .Where(l => l.Type == LessonType.Assignment || l.Type == LessonType.Video)
+                        .Count(l => l.Homeworks.Any(h => h.StudentId == userId && h.Status == HomeworkStatus.Approved))
                 })
                 .ToList();
 

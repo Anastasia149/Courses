@@ -91,8 +91,13 @@
                                     {
                                         var lessonFilesPath = $"/uploads/lessons/{lesson.Id}/";
                                         var homeworksCount = lesson.Homeworks?.Count(h => h.Status == HomeworkStatus.Pending) ?? 0;
-                                        var submittedHomeworksCount = lesson.Homeworks?.Count(h => h.Status != HomeworkStatus.Cancelled) ?? 0;
-                                        var isAssignment = lesson.Homeworks != null && lesson.Homeworks.Any();
+                                        // Считаем количество уникальных студентов, которые отправили домашнее задание (не отмененное и не пустое)
+                                        var submittedHomeworksCount = lesson.Homeworks?
+                                            .Where(h => h.Status != HomeworkStatus.Cancelled && !string.IsNullOrWhiteSpace(h.Answer))
+                                            .Select(h => h.StudentId)
+                                            .Distinct()
+                                            .Count() ?? 0;
+                                        var isAssignment = lesson.Type == Courses.Models.LessonType.Assignment || lesson.Type == Courses.Models.LessonType.Video;
                                         
                                         <div class="lesson-item">
                                             <div class="lesson-info" style="cursor: pointer;" onclick="location.href='@Url.Action("ReviewLessonAssignments", "Teacher", new { lessonId = lesson.Id })'">
